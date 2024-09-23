@@ -1,0 +1,98 @@
+Function ExcelToCsv(vParameters)
+  
+    Dim WshShell, originalSeparator, newSeparator
+    Set WshShell = CreateObject("WScript.Shell")
+    ' Guardar el separador de listas original
+    originalSeparator = WshShell.RegRead("HKEY_CURRENT_USER\Control Panel\International\sList")
+    ' Cambiar el separador de listas a pipe
+    newSeparator = "|"
+    WshShell.RegWrite "HKEY_CURRENT_USER\Control Panel\International\sList", newSeparator
+    ' Aquí puedes agregar el código para realizar las operaciones necesarias
+    ' Por ejemplo, guardar un archivo CSV con el nuevo separador
+    ' Restaurar el separador de listas original
+  	'WshShell.RegWrite "HKEY_CURRENT_USER\Control Panel\International\sList", originalSeparator
+    ' Liberar el objeto WshShell
+  
+   'Set WshShell = Nothing
+  Dim aParameters,Respuesta
+  aParameters = Split(vParameters, "¶")
+  vExcelPath = aParameters(0)
+  vDest_File = aParameters(1)
+  vNameSheet = aParameters(2)
+  vNumberFormat = aParameters(3)
+  vColumnas = aParameters(4)
+  vRango = aParameters(5)
+  vDecimalSeparator = aParameters(6)
+  vThousandsSeparator = aParameters(7)
+
+On Error Resume Next 
+Dim xlToLeft,xlToRight 
+  xlToLeft= -4159 
+  xlToRight = -4161
+  Dim array1
+  Dim array2
+  Set objExcel = CreateObject("Excel.Application")
+  objExcel.Visible = False
+  objExcel.DisplayAlerts = False
+  objExcel.DecimalSeparator = vDecimalSeparator
+  objExcel.ThousandsSeparator = vThousandsSeparator 
+  objExcel.UseSystemSeparators = False 
+  Set Excel1= objExcel.Workbooks.Open(vExcelPath , , , , , , , , , , , , , 1)
+ 
+  'MsgBox "Abrir"
+  If Err.Number <> 0 Then
+    Respuesta = "Number of the Error "& Err.Number &" and Description is " & Err.Description
+  else
+    If IsNumeric(vNameSheet) = True then
+      
+      Excel1.Worksheets(cint(vNameSheet)).Activate
+    Else
+      Excel1.Worksheets(vNameSheet).Activate
+    End If
+    If Err.Number = 0 Then
+      
+      array1 = Split(vNumberFormat, "|")
+      array2 = Split(vColumnas, "|")
+      'Borrar columnas que Sobran
+      Excel1.Worksheets(vNameSheet).Columns(vRango).Select
+      Excel1.Worksheets(vNameSheet).Range(objExcel.Selection, objExcel.Selection.End(xlToRight)).Select
+      objExcel.Selection.Delete xlToLeft
+    'Cambiar Formato de datos 
+      
+      For i = 0 to ubound(array1)
+        Excel1.Worksheets(vNameSheet).Columns(array2(i)).Select
+        objExcel.Selection.NumberFormat = array1(i)
+      Next
+        
+      'Guardar en csv columnas
+      Excel1.SaveAs vDest_File, 6, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1
+     
+      
+    else
+        Respuesta = "Number of the Error "& Err.Number &" and Description is " & Err.Description & " La Hoja (" & vNameSheet & ") No existe"
+        
+    End If
+      
+  End If
+  
+  objExcel.quit
+  set objExcel=nothing
+    
+  On Error Resume Next 
+  ExcelToCsv = Respuesta
+    
+    
+    Set WshShell = CreateObject("WScript.Shell")
+    ' Guardar el separador de listas original
+    originalSeparator = WshShell.RegRead("HKEY_CURRENT_USER\Control Panel\International\sList")
+    ' Cambiar el separador de listas a pipe
+    newSeparator = ","
+    WshShell.RegWrite "HKEY_CURRENT_USER\Control Panel\International\sList", newSeparator
+    ' Aquí puedes agregar el código para realizar las operaciones necesarias
+    ' Por ejemplo, guardar un archivo CSV con el nuevo separador
+    ' Restaurar el separador de listas original
+    'WshShell.RegWrite "HKEY_CURRENT_USER\Control Panel\International\sList", originalSeparator
+    ' Liberar el objeto WshShell
+    Set WshShell = Nothing
+
+End Function
