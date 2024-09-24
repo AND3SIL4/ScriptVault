@@ -75,14 +75,14 @@ Este proyecto está licenciado bajo la Licencia MIT - vea el archivo [LICENSE](L
   <tr>
     <td align="center">
       <a href="https://github.com/AND3SIL4">
-        <img src="https://github.com/AND3SIL4.png?size=100" width="100" style="border-radius: 50%;"/>
+        <img src="https://github.com/AND3SIL4.png?size=100" width="80" style="border-radius: 50%;"/>
       </a>
       <br />
       <sub><b><a href="https://github.com/AND3SIL4">Felipe Silva</a></b></sub>
     </td>
     <td align="center">
       <a href="https://github.com/thedaob">
-        <img src="https://github.com/thedaob.png?size=100" width="100" style="border-radius:50%;"/>
+        <img src="https://github.com/thedaob.png?size=100" width="80" style="border-radius:50%;"/>
       </a>
       <br />
       <sub><b><a href="https://github.com/thedaob">Daniel Ortega</a></b></sub>
