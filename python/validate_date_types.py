@@ -9,7 +9,7 @@ def main(params: dict):
     col_idx = int(params.get("col_idx"))
     inconsistencias_file = params.get("inconsistencias_file")
     sheet_name = params.get("sheet_name")
-    can_be_null = bool(params.get("can_be_null"))
+    is_null = bool(params.get("is_null"))
 
     if not all([file_path, col_idx, inconsistencias_file, sheet_name]):
       return "Error: input param is missing"
@@ -18,12 +18,12 @@ def main(params: dict):
     df: pd.DataFrame = pd.read_excel(file_path, sheet_name=sheet_name, engine="openpyxl")
 
     ## Create a new column to validate dates, considering null
-    df["valid_date"] = df.iloc[:, col_idx].astype(str).apply(lambda x: is_valid(x, can_be_null))
+    df["valid_date"] = df.iloc[:, col_idx].astype(str).apply(lambda x: is_valid(x, is_null))
 
     ##Apply filter
     filtered_file = df[~df["valid_date"]].copy()
 
-    print(filtered_file)
+    print(filtered_file.iloc[:, col_idx])
 
     if (filtered_file.empty):
       return "Validación correcta, no hay inconsistencias"
@@ -45,52 +45,24 @@ def main(params: dict):
   except Exception as e:
     return f"Error: {e}"
   
-def is_valid(value: str, can_be_null: bool):
+def is_valid(value: str, is_null: bool):
     """Check if the value is a valid date. If nulls are allowed, treat NaN as valid."""
-    if can_be_null:
+    if is_null:
        ##Can be null value
-       if value.lower() == "nan" or value.strip() == "":
+      if value.lower() == "nan":
         return True
-       else:
-          try:
-            datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-            return True
-          except (ValueError, TypeError):
-            return False
+      else:
+        return False
     else:
       try:
         ##Can be null value
-        if value.lower() == "nan" or value.strip() == "":
+        if value.lower() == "nan":
           return False
         datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
         return True
       except (ValueError, TypeError):
         return False
       
-def is_valid_date(date_string):
-    """
-    Intenta convertir una cadena a una fecha.
-    Retorna True si es una fecha válida, False en caso contrario.
-    """
-    date_formats = [
-        "%Y-%m-%d",  # 2023-05-15
-        "%d/%m/%Y",  # 15/05/2023
-        "%d-%m-%Y",  # 15-05-2023
-        "%d.%m.%Y",  # 15.05.2023
-        "%d/%m/%y",  # 15/05/23
-        "%Y%m%d",    # 20230515
-        # Agrega más formatos según sea necesario
-    ]
-    
-    for date_format in date_formats:
-        try:
-            datetime.strptime(str(date_string), date_format)
-            return True
-        except ValueError:
-            continue
-    return False
-
-  
 def get_excel_column_name(n):
     """Convert a column number (1-based) to Excel column name (e.g., 1 -> A, 28 -> AB)."""
     result = ''
@@ -102,10 +74,10 @@ def get_excel_column_name(n):
 if __name__ == "__main__":
   params = {
     "file_path": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
-    "col_idx": "21",
+    "col_idx": "43",
     "inconsistencias_file": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBaseReparto.xlsx",
     "sheet_name": "CASOS NUEVOS",
-    "can_be_null": False
+    "is_null": False
   }
 
   print(main(params))
