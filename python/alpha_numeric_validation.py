@@ -6,15 +6,15 @@ def main(params: dict):
     try:
         ##Set initial variables
         file_path: str = params.get("file_path")
-        col_idx: int = int(params.get("col_name"))
+        col_idx: int = int(params.get("col_idx"))
         inconsistencias_file: str = params.get("inconsistencias_file")
         sheet_name: str = "CASOS NUEVOS"
         mandatory = params.get("mandatory")
         alpha_numeric = params.get("alpha_numeric")
 
+        ##Set initial variables
         if not all(
             [
-                ##Set initial variables
                 file_path,
                 col_idx,
                 inconsistencias_file,
@@ -33,12 +33,18 @@ def main(params: dict):
         ##Filter information and validate if the current data if number type
         df["is_valid"] = df.apply(
             lambda row: is_valid(
-                str(row.iloc[col_idx]), mandatory, alpha_numeric, str(row.iloc[15])
+                str(row.iloc[col_idx]),
+                mandatory,
+                alpha_numeric,
+                str(row.iloc[15]),
+                str(row.iloc[6]),
             ),
             axis=1,
         )
         ##Add inconsistencies to a filtered data frame
         filtered_file = df[~df["is_valid"]].copy()
+
+        print(filtered_file.iloc[:, col_idx])
 
         ##Return and store the result
         if filtered_file.empty:
@@ -73,22 +79,43 @@ def main(params: dict):
         return f"Error: {e}"
 
 
-def is_valid(value: str, mandatory: list[str], alpha_numeric: list[str], tomador: str):
-    if value.strip() == "" or value.lower() == "nan":
-        if tomador in mandatory:
-            return False ##!Should return False
-        else: 
-            return True
-    else:
-      try:
-        #Parse the value into string
-        int(value)
-        return True
-      except:
-        if tomador in alpha_numeric and value.isalnum():  
-          return True
-        print(tomador)
+def is_valid(
+    value: str,
+    mandatory: list[str],
+    alpha_numeric: list[str],
+    tomador: str,
+    poliza: str,
+) -> bool:
+    """Validate the value based on the given rules"""
+    ##Delete white spaces at the end and start of the string
+    value = value.strip()
+
+    ##Validate if the value is empty string
+    if value == "":
         return False
+    
+    ##Validate if the value is number
+    if value.isdigit():
+        return True
+    
+    ##Validate NaN (Not a Number)
+    if value.lower() == "nan":
+        if tomador not in mandatory:
+            return True
+        else:
+            return False
+    
+    ##Validate if the value is alphanumeric
+    if value.isalnum():
+        if tomador not in alpha_numeric:
+            return False
+        elif tomador not in mandatory:
+            print(value, tomador)
+            return True
+        else:
+            return True
+
+    return False
 
 def get_excel_column_name(n):
     """Convert a column number (1-based) to Excel column name (e.g., 1 -> A, 28 -> AB)."""
@@ -98,17 +125,18 @@ def get_excel_column_name(n):
         result = chr(65 + remainder) + result
     return result
 
+
 if __name__ == "__main__":
     params = {
-        "file_path": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\BASE DE REPARTO 2024.xlsx",
-        "col_name": "98",
+        "file_path": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
+        "col_idx": "98",
         "inconsistencias_file": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBaseReparto.xlsx",
         "mandatory": [
             "BANCO W SA",
             "BANCO AGRARIO DE COLOMBIA SA",
             "BANCO GNB SUDAMERIS",
         ],
-        "alpha_numeric": ["BANCO W SA", "BAN"],
+        "alpha_numeric": ["BANCO W SA"],
     }
 
     print(main(params))
