@@ -9,8 +9,7 @@ def main(params: dict):
         col_idx: int = int(params.get("col_idx"))
         inconsistencias_file: str = params.get("inconsistencias_file")
         sheet_name: str = "CASOS NUEVOS"
-        mandatory = params.get("mandatory")
-        alpha_numeric = params.get("alpha_numeric")
+        list_file = params.get("list_file")
 
         ##Set initial variables
         if not all(
@@ -19,8 +18,7 @@ def main(params: dict):
                 col_idx,
                 inconsistencias_file,
                 sheet_name,
-                mandatory,
-                alpha_numeric,
+                list_file
             ]
         ):
             return "ERROR: An input required param is missing"
@@ -29,15 +27,19 @@ def main(params: dict):
         df: pd.DataFrame = pd.read_excel(
             file_path, sheet_name=sheet_name, engine="openpyxl"
         )
+        list_df: pd.DataFrame = pd.read_excel(
+            list_file, sheet_name="COLUMNA CREDITO", engine="openpyxl"
+        )
 
         ##Filter information and validate if the current data if number type
         df["is_valid"] = df.apply(
             lambda row: is_valid(
                 str(row.iloc[col_idx]),
-                mandatory,
-                alpha_numeric,
+                list_df.iloc[:, 1].dropna().astype(str).values.tolist(),
+                list_df.iloc[:, 2].dropna().astype(str).values.tolist(),
                 str(row.iloc[15]),
                 str(row.iloc[6]),
+                list_df.iloc[:, 0].dropna().values.tolist()
             ),
             axis=1,
         )
@@ -55,7 +57,7 @@ def main(params: dict):
                 axis=1,
             )
 
-            new_sheet_name = "TipoNumeroBancoW"
+            new_sheet_name = "ValidacionCredito"
             if os.path.exists(inconsistencias_file):
                 with pd.ExcelFile(inconsistencias_file, engine="openpyxl") as xls:
                     if new_sheet_name in xls.sheet_names:
@@ -78,18 +80,17 @@ def main(params: dict):
     except Exception as e:
         return f"Error: {e}"
 
-
 def is_valid(
     value: str,
     mandatory: list[str],
     alpha_numeric: list[str],
     tomador: str,
     poliza: str,
+    list_exception: list[str]
 ) -> bool:
     """Validate the value based on the given rules"""
     ##Delete white spaces at the end and start of the string
     value = value.strip()
-
     ##Validate if the value is empty string
     if value == "":
         return False
@@ -100,7 +101,7 @@ def is_valid(
     
     ##Validate NaN (Not a Number)
     if value.lower() == "nan":
-        if tomador not in mandatory:
+        if (tomador not in mandatory) or (int(poliza) in list_exception):
             return True
         else:
             return False
@@ -110,7 +111,6 @@ def is_valid(
         if tomador not in alpha_numeric:
             return False
         elif tomador not in mandatory:
-            print(value, tomador)
             return True
         else:
             return True
@@ -128,15 +128,10 @@ def get_excel_column_name(n):
 
 if __name__ == "__main__":
     params = {
-        "file_path": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
+        "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
         "col_idx": "98",
-        "inconsistencias_file": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBaseReparto.xlsx",
-        "mandatory": [
-            "BANCO W SA",
-            "BANCO AGRARIO DE COLOMBIA SA",
-            "BANCO GNB SUDAMERIS",
-        ],
-        "alpha_numeric": ["BANCO W SA"],
+        "inconsistencias_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBaseReparto.xlsx",
+        "list_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\Listas - BOT.xlsx"
     }
 
     print(main(params))
