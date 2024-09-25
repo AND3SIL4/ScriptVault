@@ -1,0 +1,65 @@
+Sub AutoFillColumns(workbookPath As String, sheetName As String, lastRow As Long)
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim rng As Range
+    Dim col As Range
+    Dim startRow As Long
+    Dim endRow As Long
+    Dim colLetter As String
+    
+    ' Abrir el libro
+    Set wb = Workbooks.Open(workbookPath)
+    ' Seleccionar la hoja
+    Set ws = wb.Sheets(sheetName)
+    
+    ' Definir la fila de inicio y la fila final
+    startRow = 3
+    endRow = lastRow
+    
+    ' Loop a través de las columnas desde A hasta AK
+    For i = 1 To 37 ' A es 1, AK es 37
+        colLetter = Split(ws.Cells(1, i).Address, "$")(1)
+        Set rng = ws.Range(colLetter & startRow & ":" & colLetter & endRow)
+        Set col = ws.Range(colLetter & startRow & ":" & colLetter & startRow)
+        
+        ' Hacer autofill
+        col.AutoFill Destination:=rng
+    Next i
+    
+    ' Cerrar el libro (opcional)
+    ' wb.Close SaveChanges:=True
+End Sub
+Sub AutoFillColumns(workbookPath As String, sheetName As String, lastRow As Long)
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim rng As Range
+    Dim col As Range
+    Dim startRow As Long
+    Dim endRow As Long
+    Dim colLetter As String
+    
+    ' Abrir el libro
+    Set wb = Workbooks.Open(workbookPath)
+    ' Seleccionar la hoja
+    Set ws = wb.Sheets(sheetName)
+    
+    ' Definir la fila de inicio y la fila final
+    startRow = 3
+    endRow = lastRow
+    
+    ' Loop a través de las columnas desde A hasta AK
+    For i = 1 To 37 ' A es 1, AK es 37
+        colLetter = Split(ws.Cells(1, i).Address, "$")(1)
+        Set rng = ws.Range(colLetter & startRow & ":" & colLetter & endRow)
+        Set col = ws.Range(colLetter & startRow & ":" & colLetter & startRow)
+        
+        ' Hacer autofill
+        col.AutoFill Destination:=rng
+    Next i
+    
+    ' Cerrar el libro (opcional)
+    ' wb.Close SaveChanges:=True
+End Sub
+Sub TestAutoFill()
+    AutoFillColumns "C:\Ruta\A\MiLibro.xlsx", "Hoja1", 100
+End Sub
