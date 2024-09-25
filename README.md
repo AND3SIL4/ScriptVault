@@ -99,7 +99,7 @@ Este proyecto está licenciado bajo la Licencia MIT - vea el archivo [LICENSE](L
         <img src="https://github.com/Jagudelo23.png?size=100" width="80" style="border-radius:50%;"/>
       </a>
       <br />
-      <sub><b><a href="https://github.com/Jagudelo23">Daniel Bernal</a></b></sub>
+      <sub><b><a href="https://github.com/Jagudelo23">Camilio</a></b></sub>
     </td>
   </tr>
 </table>
