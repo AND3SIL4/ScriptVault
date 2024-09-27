@@ -13,6 +13,7 @@ def main(params: dict):
         need_iaxis: bool = bool(params.get("need_iaxis"))
         list_file: str = params.get("list_file")
         except_idx = int(params.get("except_idx"))
+        sheet_name_list = params.get("sheet_name_list")
 
         ##Local variables
         validated_values: dict = {}
@@ -23,13 +24,14 @@ def main(params: dict):
             sheet_name,
             new_sheet,
             inconsistencies_file,
-            list_file
+            list_file,
+            sheet_name_list
         ]):
             return "Error: an input param is missing"
 
         ##Read the book and load it
         df: pd.DataFrame = pd.read_excel(file_path, sheet_name=sheet_name, engine="openpyxl")
-        list_df: pd.DataFrame = pd.read_excel(list_file, sheet_name="EXCEPCIONES POLIZA VS TOMADOR", engine="openpyxl")
+        list_df: pd.DataFrame = pd.read_excel(list_file, sheet_name=sheet_name_list, engine="openpyxl")
 
         ##Apply validation
         df["is_valid"] = df.apply(
@@ -49,7 +51,7 @@ def main(params: dict):
         if not filtered_file.empty:
             ##Get the coordinates
             coordinates = filtered_file.apply(
-                lambda row: f"{get_excel_column_name(col_idx2 + 1)}{row.name + 2}", axis=1
+                lambda row: f"{get_excel_column_name(col_idx1 + 1)}{row.name + 2}", axis=1
             )
 
             filtered_file["COORDINATES"] = coordinates
@@ -99,13 +101,14 @@ if __name__ == "__main__":
     params = {
         "file_path": "C:/ProgramData/AutomationAnywhere/Bots/Logs/AD_RCSN_SabanaPagosYBasesParaSinestralidad/TempFolder/BASE DE REPARTO 2024.xlsx",
         "sheet_name": "CASOS NUEVOS",
-        "col_idx1": "15",
-        "col_idx2": "16",
+        "col_idx1": "2",
+        "col_idx2": "0",
         "in_file": "C:/ProgramData/AutomationAnywhere/Bots/Logs/AD_RCSN_SabanaPagosYBasesParaSinestralidad/OutputFolder/Inconsistencias/InconBaseReparto.xlsx",
-        "new_sheet": "TomadorVsPoliza",
+        "new_sheet": "RadicadoUnicoSiniestro",
         "need_iaxis": False,
         "list_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\Listas - BOT.xlsx",
-        "except_idx": "1"
+        "except_idx": "3",
+        "sheet_name_list": "EXCEPCIONES COPARACION SINIES"
     }
 
     print(main(params))
