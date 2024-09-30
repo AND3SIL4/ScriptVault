@@ -48,35 +48,36 @@ def main(params: dict):
         filtered_file = df[~df["is_valid"]].copy()
         print(filtered_file)
 
-        if not filtered_file.empty:
-            ##Get the coordinates
-            coordinates = filtered_file.apply(
-                lambda row: f"{get_excel_column_name(col_idx1 + 1)}{row.name + 2}", axis=1
-            )
-
-            filtered_file["COORDINATES"] = coordinates
-
-            ##Store result into inconsistencies file
-            if os.path.exists(inconsistencies_file):
-                with pd.ExcelFile(inconsistencies_file, engine="openpyxl") as xls:
-                    if new_sheet in xls.sheet_names:
-                        existing = pd.read_excel(xls, sheet_name=new_sheet, engine="openpyxl")
-                        filtered_file = pd.concat([existing, filtered_file], ignore_index=True)
-
-            with pd.ExcelWriter(
-                inconsistencies_file, engine="openpyxl", if_sheet_exists="replace", mode="a"
-            ) as writer:
-                filtered_file.to_excel(writer, index=False, sheet_name=new_sheet)
-                    
-            if need_iaxis:
-                coordinate_col: pd.Series = filtered_file["COORDINATES"]
-                inconsistencies_list = coordinate_col.dropna().astype(str).to_list()
-                return inconsistencies_list
+        if not need_iaxis:
+            if not filtered_file.empty:
+                ##Get the coordinates
+                filtered_file["COORDINATE_1"]  = filtered_file.apply(
+                    lambda row: f"{get_excel_column_name(col_idx1 + 1)}{row.name + 2}", axis=1
+                )
+                filtered_file["COORDINATE_2"] = filtered_file.apply(
+                    lambda row: f"{get_excel_column_name(col_idx2 + 1)}{row.name + 2}", axis=1
+                )
+                ##Store the inconsistencies into the inconsistencies file
+                return append_inconsistencias(inconsistencies_file, new_sheet, filtered_file)                
             else:
-                return "Inconsistencias registradas correctamente"
+                return "Validacion realizada, no se encontraron inconsistencias"
         else:
-            return "Validacion realizada, no se encontraron inconsistencias"
-
+            ##Get the inconsistencies values
+            inconsistencies_col = filtered_file.iloc[:, col_idx1]
+            new_df = df[df.iloc[:, col_idx1].isin(inconsistencies_col)].copy()
+            ##Get the coordinates
+            if not new_df.empty:
+                new_df["COORDINATE_1"] = new_df.apply(
+                    lambda row: f"{get_excel_column_name(col_idx1 + 1)}{row.name + 2}", axis=1
+                )
+                new_df["COORDINATE_2"] = new_df.apply(
+                    lambda row: f"{get_excel_column_name(col_idx2 + 1)}{row.name + 2}", axis=1
+                )
+                ##Store the inconsistencies into the inconsistencies file
+                append_inconsistencias(inconsistencies_file, new_sheet, new_df)
+                return True
+            else:
+                return False
     except Exception as e:
         return f"Error: {e}"
 
@@ -97,15 +98,30 @@ def validate(key: str, value: str, validated: dict[str], exception_list: list[st
         validated[key] = value
         return True
 
+
+def append_inconsistencias(file_path: str, new_sheet: str, data_frame) -> None:
+    """This function get the inconsistencies data frame and append it into the inconsistencies file"""
+    if os.path.exists(file_path):
+        with pd.ExcelFile(file_path, engine="openpyxl") as xls:
+            if new_sheet in xls.sheet_names:
+                existing = pd.read_excel(xls, sheet_name=new_sheet, engine="openpyxl")
+                data_frame = pd.concat([existing, data_frame], ignore_index=True)
+
+        with pd.ExcelWriter(
+            file_path, engine="openpyxl", if_sheet_exists="replace", mode="a"
+        ) as writer:
+            data_frame.to_excel(writer, index=False, sheet_name=new_sheet)        
+            return "Inconsistencias registradas correctamente"
+
 if __name__ == "__main__":
     params = {
         "file_path": "C:/ProgramData/AutomationAnywhere/Bots/Logs/AD_RCSN_SabanaPagosYBasesParaSinestralidad/TempFolder/BASE DE REPARTO 2024.xlsx",
         "sheet_name": "CASOS NUEVOS",
-        "col_idx1": "2",
-        "col_idx2": "0",
+        "col_idx1": "6",
+        "col_idx2": "15",
         "in_file": "C:/ProgramData/AutomationAnywhere/Bots/Logs/AD_RCSN_SabanaPagosYBasesParaSinestralidad/OutputFolder/Inconsistencias/InconBaseReparto.xlsx",
-        "new_sheet": "RadicadoUnicoSiniestro",
-        "need_iaxis": False,
+        "new_sheet": "PolizaVsTomador",
+        "need_iaxis": True,
         "list_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\Listas - BOT.xlsx",
         "except_idx": "3",
         "sheet_name_list": "EXCEPCIONES COPARACION SINIES"
