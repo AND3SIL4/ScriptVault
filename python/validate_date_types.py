@@ -18,7 +18,7 @@ def main(params: dict):
     df: pd.DataFrame = pd.read_excel(file_path, sheet_name=sheet_name, engine="openpyxl")
 
     ## Create a new column to validate dates, considering null
-    df["valid_date"] = df.iloc[:, col_idx].astype(str).apply(lambda x: is_valid(x, is_null))
+    df["valid_date"] = df.iloc[:, col_idx].apply(lambda x: is_valid(x, is_null))
 
     ##Apply filter
     filtered_file = df[~df["valid_date"]].copy()
@@ -49,16 +49,13 @@ def is_valid(value: str, is_null: bool):
     """Check if the value is a valid date. If nulls are allowed, treat NaN as valid."""
     if is_null:
        ##Can be null value
-      if value.lower() == "nan":
+      if pd.isnull(value):
         return True
       else:
         return False
     else:
       try:
-        ##Can be null value
-        if value.lower() == "nan":
-          return False
-        datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        pd.to_datetime(value, format="%Y-%m-%d", errors="raise")
         return True
       except (ValueError, TypeError):
         return False
@@ -74,7 +71,7 @@ def get_excel_column_name(n):
 if __name__ == "__main__":
   params = {
     "file_path": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
-    "col_idx": "43",
+    "col_idx": "27",
     "inconsistencias_file": "C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBaseReparto.xlsx",
     "sheet_name": "CASOS NUEVOS",
     "is_null": False
