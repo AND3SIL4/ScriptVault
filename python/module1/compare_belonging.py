@@ -117,13 +117,13 @@ if __name__ == "__main__":
     params = {
         "file_path": "C:/ProgramData/AutomationAnywhere/Bots/Logs/AD_RCSN_SabanaPagosYBasesParaSinestralidad/TempFolder/BASE DE REPARTO 2024.xlsx",
         "sheet_name": "CASOS NUEVOS",
-        "col_idx1": "6",
-        "col_idx2": "15",
+        "col_idx1": "0",
+        "col_idx2": "18",
         "in_file": "C:/ProgramData/AutomationAnywhere/Bots/Logs/AD_RCSN_SabanaPagosYBasesParaSinestralidad/OutputFolder/Inconsistencias/InconBaseReparto.xlsx",
-        "new_sheet": "PolizaVsTomador",
+        "new_sheet": "SiniestroUnicaPoliza",
         "need_iaxis": True,
         "list_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\Listas - BOT.xlsx",
-        "except_idx": "3",
+        "except_idx": "2",
         "sheet_name_list": "EXCEPCIONES COPARACION SINIES"
     }
 
