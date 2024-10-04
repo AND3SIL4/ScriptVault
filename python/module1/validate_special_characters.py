@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as pd #type: ignore
 import os
 import re
 from typing import List

@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as pd #type: ignore
 
 def main(params: dict):
   """This function validate if a column cell should be empty or not 
