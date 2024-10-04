@@ -92,7 +92,7 @@ Este proyecto está licenciado bajo la Licencia MIT - vea el archivo [LICENSE](L
         <img src="https://github.com/DanielBernal133.png?size=100" width="80" style="border-radius:50%;"/>
       </a>
       <br />
-      <sub><b><a href="https://github.com/thedaob">Daniel Bernal</a></b></sub>
+      <sub><b><a href="https://github.com/DanielBernal133">Daniel Bernal</a></b></sub>
     </td>
     <td align="center">
       <a href="https://github.com/Jagudelo23">
