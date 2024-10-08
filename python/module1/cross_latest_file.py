@@ -50,53 +50,75 @@ def main(params: dict) -> None:
             (latest_file_df.iloc[:, col_idx] > initial_date)
             & (latest_file_df.iloc[:, col_idx] < cut_off_date)
         ]
-        ##Set the variables to store the values of column "Valor Reserva"
-        reserva_latest_cut = file_filtered.iloc[:, 34].sum()
-        reserva_current_cut = latest_filtered.iloc[:, 34].sum()
 
-        print(reserva_latest_cut)
-        print(reserva_current_cut)
+        ##Key name
+        key_name = "SINIESTRO+RADICADO+AMPARO+RESERVA"
 
-        # Validate if the values of "Reserva" are the same
-        if reserva_latest_cut != reserva_current_cut:
-            file_filtered["LLAVE_CRUCE"] = (
-                file_filtered.iloc[:, 0].astype(str)
-                + "-"
-                + file_filtered.iloc[:, 2].astype(str)
-                + "-"
-                + file_filtered.iloc[:, 32].astype(str)
+        file_filtered[key_name] = (
+            file_filtered.iloc[:, 0].astype(str)
+            + "-"
+            + file_filtered.iloc[:, 2].astype(str)
+            + "-"
+            + file_filtered.iloc[:, 32].astype(str)
+            + "-"
+            + file_filtered.iloc[:, 34].astype(str)
+        )
+
+        latest_filtered[key_name] = (
+            latest_filtered.iloc[:, 0].astype(str)
+            + "-"
+            + latest_filtered.iloc[:, 2].astype(str)
+            + "-"
+            + latest_filtered.iloc[:, 32].astype(str)
+            + "-"
+            + latest_filtered.iloc[:, 34].astype(str)
+        )
+
+        file_not_in_latest = file_filtered[
+            ~file_filtered[key_name].isin(latest_filtered[key_name])
+        ].copy()
+        if not file_not_in_latest.empty:
+            file_not_in_latest["file_to_find"] = "Ejecución actual"
+        
+        latest_not_in_file = latest_filtered[
+            ~latest_filtered[key_name].isin(file_filtered[key_name])
+        ].copy()
+        if not latest_not_in_file.empty:
+            latest_not_in_file["file_to_find"] = "Ejecución anterior"
+            
+        if not file_not_in_latest.empty and not latest_not_in_file.empty:
+            # Combine the results of both mismatches
+            inconsistencies = pd.concat([file_not_in_latest, latest_not_in_file])
+        elif not file_not_in_latest.empty and latest_not_in_file.empty:
+            inconsistencies = file_not_in_latest
+        elif file_not_in_latest.empty and not latest_not_in_file.empty:
+            inconsistencies = latest_not_in_file
+
+        if not inconsistencies.empty:
+            # Add a column with Excel coordinates (e.g., A2, B3) of the inconsistent cells
+            inconsistencies["COORDENADAS_1"] = inconsistencies.apply(
+                lambda row: f"{get_excel_column_name(1)}{row.name + 2}",
+                axis=1,
             )
-            file_filtered["RESERVA_CRUCE"] = file_filtered.iloc[:, 34]
-
-            latest_filtered["LLAVE_CRUCE"] = (
-                latest_filtered.iloc[:, 0].astype(str)
-                + "-"
-                + latest_filtered.iloc[:, 2].astype(str)
-                + "-"
-                + latest_filtered.iloc[:, 32].astype(str)
+            inconsistencies["COORDENADAS_2"] = inconsistencies.apply(
+                lambda row: f"{get_excel_column_name(3)}{row.name + 2}",
+                axis=1,
             )
-
-            ##Make crossover file
-            merge_df: pd.DataFrame = latest_filtered.merge(
-                file_filtered[["LLAVE_CRUCE", "RESERVA_CRUCE"]],
-                on="LLAVE_CRUCE",
-                how="left",
-                suffixes=("_OLD", "_NEW"),
+            inconsistencies["COORDENADAS_3"] = inconsistencies.apply(
+                lambda row: f"{get_excel_column_name(33)}{row.name + 2}",
+                axis=1,
             )
-
-            merge_df["VALIDATION"] = merge_df.iloc[:, 34] == merge_df.iloc[:, -1]
-            inconsistencies = merge_df[~merge_df["VALIDATION"]].copy()
-
-            inconsistencies["COORDINATE_1"] = inconsistencies.apply(
+            inconsistencies["COORDENADAS_4"] = inconsistencies.apply(
                 lambda row: f"{get_excel_column_name(35)}{row.name + 2}",
                 axis=1,
             )
 
             return append_inconsistencias(
-                inconsistencies_file, "ValidacionTotalReserva", inconsistencies
+                inconsistencies_file, "ReservaCorteAnterior", inconsistencies
             )
         else:
-            return "Validacion realizada, no se encontraron novedades por registrar"
+            return "Validacion realizada, no se encontraron inconsistencias"
+
     except Exception as e:
         return f"ERROR: {e}"
 
@@ -130,7 +152,7 @@ if __name__ == "__main__":
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
         "inconsistencias_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBaseReparto.xlsx",
         "sheet_name": "CASOS NUEVOS",
-        "latest_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Historico base reparto\BASE DE REPARTO 2024 ACTUALIZADO.xlsx",
+        "latest_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Historico base reparto\BASE DE REPARTO 2024 CIERRE JULIO.xlsx",
         "sheet_latest_name": "CASOS NUEVOS",
         "col_idx": "24",
         "cut_date": "30/07/2024",
