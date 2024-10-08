@@ -52,7 +52,7 @@ def main(params: dict):
 
         new_sheet = "REPORTE"
         with pd.ExcelWriter(
-            inconsistencies_file, engine="openpyxl", mode="a", if_sheet_exists="replace"
+            file_path, engine="openpyxl", mode="a", if_sheet_exists="replace"
         ) as writer:
             dynamic_table.to_excel(writer, sheet_name=new_sheet, index=True)
             return "Tabla guardada correctamente"
