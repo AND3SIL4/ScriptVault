@@ -1,6 +1,5 @@
 import pandas as pd  # type: ignore
-import os
-from openpyxl import load_workbook  # type: ignore
+import re
 
 
 def main(params: dict):
@@ -8,7 +7,6 @@ def main(params: dict):
         ##Set initial variables
         file_path: str = params.get("file_path")
         sheet_name: str = params.get("sheet_name")
-        inconsistencies_file: str = params.get("inconsistencies_file")
 
         ##Validate if all the required inputs are present
         if not all([file_path, sheet_name]):
@@ -16,6 +14,13 @@ def main(params: dict):
 
         data_frame: pd.DataFrame = pd.read_excel(
             file_path, sheet_name=sheet_name, engine="openpyxl"
+        )
+
+        ##Fix white spaces
+        data_frame["MES DE ASIGNACION"] = (
+            data_frame["MES DE ASIGNACION"]
+            .astype(str)
+            .apply(lambda x: clean_white_spaces(x))
         )
 
         months_by_number = {
@@ -60,11 +65,15 @@ def main(params: dict):
         return f"ERROR: {e}"
 
 
+def clean_white_spaces(string: str):
+    value = re.sub(r"[\s]", "", string)
+    return value
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
         "sheet_name": "CASOS NUEVOS",
-        "inconsistencies_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBaseReparto.xlsx",
     }
 
     print(main(params))

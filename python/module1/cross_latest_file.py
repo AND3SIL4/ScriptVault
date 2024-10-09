@@ -79,13 +79,17 @@ def main(params: dict) -> None:
         ].copy()
         if not file_not_in_latest.empty:
             file_not_in_latest["file_to_find"] = "Ejecución actual"
-        
+
         latest_not_in_file = latest_filtered[
             ~latest_filtered[key_name].isin(file_filtered[key_name])
         ].copy()
+
+        # Initialize inconsistencies as an empty DataFrame
+        inconsistencies = pd.DataFrame()
+
         if not latest_not_in_file.empty:
             latest_not_in_file["file_to_find"] = "Ejecución anterior"
-            
+
         if not file_not_in_latest.empty and not latest_not_in_file.empty:
             # Combine the results of both mismatches
             inconsistencies = pd.concat([file_not_in_latest, latest_not_in_file])
