@@ -58,10 +58,15 @@ def main(params: dict):
             (desempleo_df.iloc[:, col_idx] >= begin_date)
             & (desempleo_df.iloc[:, col_idx] <= cut_off_date)
         ]
+        otros_ramos_filtered = otros_ramos_filtered.iloc[:, :111]
+        desempleo_filtered = desempleo_filtered.iloc[:, :111]
+
         ##Link the files previously filtered
         base_pagos = pd.concat(
-            [otros_ramos_filtered, desempleo_filtered], ignore_index=True
+            [desempleo_filtered, otros_ramos_filtered], ignore_index=True
         )
+
+        base_pagos = base_pagos.iloc[:, :111]
 
         ##Save changes into a temp folder
         base_pagos.to_excel(destination_path, index=False, sheet_name="PAGOS")

@@ -39,7 +39,7 @@ class FirstValidationGroup:
         """Method to convert (1-based) to Excel column name"""
         result = ""
         while number > 0:
-            number, reminder = divmod(number-1, 26)
+            number, reminder = divmod(number - 1, 26)
             result = chr(65 + reminder) + result
         return result
 
@@ -72,25 +72,52 @@ class FirstValidationGroup:
                 inconsistencies, col_idx, "ValidacionColumnasVacias"
             )
 
+    def number_type(self, col_idx: int) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["is_valid"] = data_frame.iloc[:, col_idx].apply(
+            lambda x: str(x).replace(".", "").isdigit() if pd.notna(x) else False
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, col_idx, "DatoTipoNumero")
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
 
 
-def main(params: dict) -> None:
-    global validation_group
+def main(params: dict) -> bool:
+    try:
+        global validation_group
 
-    ## Get the variables
-    file_path: str = params.get("file_path")
-    sheet_name: str = params.get("sheet_name")
-    inconsistencies_file: str = params.get("inconsistencies_file")
+        ## Get the variables
+        file_path: str = params.get("file_path")
+        sheet_name: str = params.get("sheet_name")
+        inconsistencies_file: str = params.get("inconsistencies_file")
+        validation_group = FirstValidationGroup(
+            file_path, sheet_name, inconsistencies_file
+        )
+        return True
+    except Exception as e:
+        return f"ERROR: {e}"
 
-    validation_group = FirstValidationGroup(file_path, sheet_name, inconsistencies_file)
+
+def validate_empty_cols(incomes: dict) -> str:
+    try:
+        col_idx = int(incomes.get("col_idx"))
+        is_mandatory = incomes.get("is_mandatory")
+
+        validate: str = validation_group.validate_empty_col(col_idx, is_mandatory)
+        return validate
+    except Exception as e:
+        return f"ERROR: {e}"
 
 
-def validate_empty_cols(col_idx: int, is_mandatory: bool) -> str:
-    validate: str = validation_group.validate_empty_col(col_idx, is_mandatory)
-    return validate
+def validate_number_type(index: int) -> str:
+    try:
+        validate: str = validation_group.number_type(index)
+        return validate
+    except Exception as e:
+        return f"ERROR: {e}"
 
 
 if __name__ == "__main__":
@@ -100,4 +127,5 @@ if __name__ == "__main__":
         "inconsistencies_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBasePagos.xlsx",
     }
     main(params)
-    print(validate_empty_cols(0, False))
+
+    print(validate_number_type(0))
