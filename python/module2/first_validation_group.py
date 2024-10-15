@@ -86,9 +86,16 @@ class FirstValidationGroup:
             data_frame.iloc[:, col_idx], errors="coerce"
         ).notna()
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
-        return self.validate_inconsistencies(
-            inconsistencies, col_idx, "DatosTipoFecha"
+        return self.validate_inconsistencies(inconsistencies, col_idx, "DatosTipoFecha")
+
+    def value_length(self, col_idx: int, length: int) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["is_valid"] = data_frame.iloc[:, col_idx].apply(
+            lambda value: len(str(value)) == length
         )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, col_idx, "LongitudValor")
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -130,9 +137,9 @@ def validate_number_type(params: dict) -> str:
         return validate
     except Exception as e:
         return f"ERROR: {e}"
-    
 
-def validate_date_type(incomes: dict)-> str:
+
+def validate_date_type(incomes: dict) -> str:
     try:
         ## Set local variables
         index = int(incomes.get("col_idx"))
@@ -143,6 +150,17 @@ def validate_date_type(incomes: dict)-> str:
         return f"ERROR: {e}"
 
 
+def validate_length(incomes: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(incomes.get("col_idx"))
+        length = int(incomes.get("length"))
+
+        validation: str = validation_group.value_length(col_idx, length)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
 
 if __name__ == "__main__":
     params = {
@@ -152,5 +170,5 @@ if __name__ == "__main__":
     }
     main(params)
 
-    otro = {"col_idx": "1"}
-    print(validate_date_type(otro))
+    params = {"col_idx": "2", "length": "18"}
+    print(validate_length(params))
