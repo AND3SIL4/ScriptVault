@@ -80,6 +80,15 @@ class FirstValidationGroup:
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(inconsistencies, col_idx, "DatoTipoNumero")
 
+    def date_type(self, col_idx: int) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["is_valid"] = pd.to_datetime(
+            data_frame.iloc[:, col_idx], errors="coerce"
+        ).notna()
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, col_idx, "DatosTipoFecha"
+        )
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -112,12 +121,27 @@ def validate_empty_cols(incomes: dict) -> str:
         return f"ERROR: {e}"
 
 
-def validate_number_type(index: int) -> str:
+def validate_number_type(params: dict) -> str:
     try:
+        ## Set local variables
+        index = int(params.get("col_idx"))
+
         validate: str = validation_group.number_type(index)
         return validate
     except Exception as e:
         return f"ERROR: {e}"
+    
+
+def validate_date_type(incomes: dict)-> str:
+    try:
+        ## Set local variables
+        index = int(incomes.get("col_idx"))
+
+        validate: str = validation_group.date_type(index)
+        return validate
+    except Exception as e:
+        return f"ERROR: {e}"
+
 
 
 if __name__ == "__main__":
@@ -128,4 +152,5 @@ if __name__ == "__main__":
     }
     main(params)
 
-    print(validate_number_type(0))
+    otro = {"col_idx": "1"}
+    print(validate_date_type(otro))
