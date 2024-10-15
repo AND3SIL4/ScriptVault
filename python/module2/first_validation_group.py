@@ -6,10 +6,17 @@ import os
 class FirstValidationGroup:
     """Class to make the fist validation in the 'Base de Pagos' process"""
 
-    def __init__(self, path_file: str, sheet_name: str, inconsistencies_file: str):
+    def __init__(
+        self,
+        path_file: str,
+        sheet_name: str,
+        inconsistencies_file: str,
+        exception_file: str,
+    ):
         self.path_file = path_file
         self.sheet_name = sheet_name
         self.inconsistencies_file = inconsistencies_file
+        self.exception_file = exception_file
 
     def read_excel(self, file_path: str, sheet_name: str) -> pd.DataFrame:
         """Method for returning a data frame"""
@@ -96,6 +103,22 @@ class FirstValidationGroup:
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(inconsistencies, col_idx, "LongitudValor")
 
+    def validate_exception_list(
+        self,
+        col_idx: int,
+        exception_col_name: int,
+        exception_sheet: str,
+        new_sheet: str,
+    ) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_data_frame: pd.DataFrame = self.read_excel(
+            self.exception_file, exception_sheet
+        )
+        col_exception: pd.Series = exception_data_frame[exception_col_name].dropna()
+        data_frame["is_valid"] = data_frame.iloc[:, col_idx].isin(col_exception)
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, col_idx, new_sheet)
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -109,8 +132,11 @@ def main(params: dict) -> bool:
         file_path: str = params.get("file_path")
         sheet_name: str = params.get("sheet_name")
         inconsistencies_file: str = params.get("inconsistencies_file")
+        exception_file: str = params.get("exception_file")
+
+        ## Pass the values to the constructor in the main class
         validation_group = FirstValidationGroup(
-            file_path, sheet_name, inconsistencies_file
+            file_path, sheet_name, inconsistencies_file, exception_file
         )
         return True
     except Exception as e:
@@ -162,13 +188,36 @@ def validate_length(incomes: dict) -> str:
         return f"ERROR: {e}"
 
 
+def validate_exception_list(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        exception_col_name = params.get("exception_col_name")
+        exception_sheet = params.get("exception_sheet")
+        new_sheet = params.get("new_sheet")
+
+        validate: str = validation_group.validate_exception_list(
+            col_idx, exception_col_name, exception_sheet, new_sheet
+        )
+        return validate
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
         "sheet_name": "PAGOS",
         "inconsistencies_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBasePagos.xlsx",
+        "exception_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\EXCEPCIONES BASE PAGOS.xlsx",
     }
     main(params)
+    # col_idx: int, exception_col: int, sheet_name: str, new_sheet: str
 
-    params = {"col_idx": "2", "length": "18"}
-    print(validate_length(params))
+    params = {
+        "col_idx": "4",
+        "exception_col_name": "TIPO DE RADICADO CASA MATRIZ",
+        "exception_sheet": "LISTAS",
+        "new_sheet": "TipoRadicadoCasaMatriz",
+    }
+    print(validate_exception_list(params))
