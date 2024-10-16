@@ -136,6 +136,83 @@ class FirstValidationGroup:
             inconsistencies, col_idx, "ValidacionCaracteresEspaciales"
         )
 
+    def month_depends_on_date(self, date_idx: int, month_idx: int) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+
+        ## Create s sub function to know the correct month depends on the number
+        months: dict = {
+            1: "ENERO",
+            2: "FEBRERO",
+            3: "MARZO",
+            4: "ABRIL",
+            5: "MAYO",
+            6: "JUNIO",
+            7: "JULIO",
+            8: "AGOSTO",
+            9: "SEPTIEMBRE",
+            10: "OCTUBRE",
+            11: "NOVIEMBRE",
+            12: "DICIEMBRE",
+        }
+
+        ## Create a sub function to validate the consistency of the date
+        def validate_consistency(date: str, month: str) -> bool:
+            date_parse = pd.to_datetime(date, format="%Y-%m-%d", errors="coerce")
+            get_month = date_parse.month
+            ## Call the dictionary
+            standard_month = months.get(get_month)
+            return month == standard_month
+
+        data_frame["is_valid"] = data_frame.apply(
+            lambda row: validate_consistency(
+                row.iloc[date_idx],
+                str(row.iloc[month_idx]),
+            ),
+            axis=1,
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, month_idx, "ValidacionMesCorte"
+        )
+
+    def radicado_format(self, col_idx) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["is_valid"] = data_frame.iloc[:, col_idx].apply(
+            lambda value: bool(re.search(r"^\d{4}\s\d{2}\s\d{3}\s\d{6}$", str(value)))
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, col_idx, "FormatoNumeroRadicado"
+        )
+
+    def acuerdo_range(self, col_idx: int) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["is_valid"] = (
+            data_frame.iloc[:, col_idx]
+            .astype(int)
+            .apply(lambda value: value >= 1 and value <= 30)
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, col_idx, "ValidacionAcuerdo"
+        )
+
+    def coaseguradora(
+        self, file_idx: int, exception_sheet: str, exception_col: str
+    ) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_df: pd.DataFrame = self.read_excel(
+            self.exception_file, exception_sheet
+        )
+        exception_col: pd.Series = exception_df[exception_col].dropna()
+        file_col: pd.Series = data_frame.iloc[:, file_idx]
+        data_frame["is_valid"] = (file_col.isin(exception_col)) | (pd.isna(file_col))
+
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, file_idx, "CompañiaCoaseguradora"
+        )
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -231,6 +308,53 @@ def validate_special_characters(params: dict) -> str:
         return f"ERROR: {e}"
 
 
+def validate_month(params: dict) -> str:
+    try:
+        ## Set local variables
+        date_idx = int(params.get("date_idx"))
+        month_idx = int(params.get("month_idx"))
+
+        validation: str = validation_group.month_depends_on_date(date_idx, month_idx)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_numero_radicado(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        validation: str = validation_group.radicado_format(col_idx)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_acuerdo_range(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        validation: str = validation_group.acuerdo_range(col_idx)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_compania_coaseguradora(params: dict) -> str:
+    try:
+        ## Set local variables
+        file_idx = int(params.get("file_idx"))
+        exception_sheet = params.get("exception_sheet")
+        exception_col = params.get("exception_col")
+
+        validation: str = validation_group.coaseguradora(
+            file_idx, exception_sheet, exception_col
+        )
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -240,6 +364,8 @@ if __name__ == "__main__":
     }
     main(params)
     params = {
-        "col_idx": "69",
+        "file_idx": "47",
+        "exception_col": "COMPAÑIA COASEGURADORA",
+        "exception_sheet": "LISTAS",
     }
-    print(validate_special_characters(params))
+    print(validate_compania_coaseguradora(params))
