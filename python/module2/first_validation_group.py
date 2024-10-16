@@ -1,6 +1,7 @@
 import pandas as pd  # type:ignore
 from typing import Optional
 import os
+import re
 
 
 class FirstValidationGroup:
@@ -119,6 +120,22 @@ class FirstValidationGroup:
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(inconsistencies, col_idx, new_sheet)
 
+    def no_special_characters(self, col_idx: int) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["is_valid"] = (
+            data_frame.iloc[:, col_idx]
+            .astype(str)
+            .apply(
+                lambda value: not pd.isna(value)
+                and bool(re.search(r"[^a-zA-Z0-9]", value))
+            )
+        )
+
+        inconsistencies: pd.DataFrame = data_frame[data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, col_idx, "ValidacionCaracteresEspaciales"
+        )
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -204,6 +221,16 @@ def validate_exception_list(params: dict) -> str:
         return f"ERROR: {e}"
 
 
+def validate_special_characters(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        validation: str = validation_group.no_special_characters(col_idx)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -212,12 +239,7 @@ if __name__ == "__main__":
         "exception_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\EXCEPCIONES BASE PAGOS.xlsx",
     }
     main(params)
-    # col_idx: int, exception_col: int, sheet_name: str, new_sheet: str
-
     params = {
-        "col_idx": "4",
-        "exception_col_name": "TIPO DE RADICADO CASA MATRIZ",
-        "exception_sheet": "LISTAS",
-        "new_sheet": "TipoRadicadoCasaMatriz",
+        "col_idx": "69",
     }
-    print(validate_exception_list(params))
+    print(validate_special_characters(params))
