@@ -213,6 +213,26 @@ class FirstValidationGroup:
             inconsistencies, file_idx, "CompañiaCoaseguradora"
         )
 
+    def only_two_options(self, col_idx: int, options: list[str], new_sheet: str) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["id_valid"] = data_frame.iloc[:, col_idx].apply(
+            lambda value: (value in options) or (pd.isna(value))
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["id_valid"]]
+        return self.validate_inconsistencies(inconsistencies, col_idx, new_sheet)
+
+    def no_white_spaces(self, col_idx: int, new_sheet: str) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["is_valid"] = (
+            data_frame.iloc[:, col_idx]
+            .astype(str)
+            .apply(
+                lambda value: (pd.isna(value)) or not (bool(re.search(r"\s\s+", value)))
+            )
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, col_idx, new_sheet)
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -355,6 +375,30 @@ def validate_compania_coaseguradora(params: dict) -> str:
         return f"ERROR: {e}"
 
 
+def validate_only_two_options(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        options = params.get("options")
+        new_sheet = params.get("new_sheet")
+        validation: str = validation_group.only_two_options(col_idx, options, new_sheet)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_no_white_spaces(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        new_sheet = params.get("new_sheet")
+
+        validation: str = validation_group.no_white_spaces(col_idx, new_sheet)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -364,8 +408,7 @@ if __name__ == "__main__":
     }
     main(params)
     params = {
-        "file_idx": "47",
-        "exception_col": "COMPAÑIA COASEGURADORA",
-        "exception_sheet": "LISTAS",
+        "col_idx": "69",
+        "new_sheet": "CodigoOficinaBanco",
     }
-    print(validate_compania_coaseguradora(params))
+    print(validate_no_white_spaces(params))
