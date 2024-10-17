@@ -52,14 +52,22 @@ class FirstValidationGroup:
         return result
 
     def validate_inconsistencies(
-        self, df: pd.DataFrame, col_idx: int, sheet_name: str
+        self, df: pd.DataFrame, col_idx, sheet_name: str
     ) -> str:
         """Method to validate the inconsistencies before append in a inconsistencies file"""
         if not df.empty:
             df = df.copy()
-            df[f"COORDENADAS"] = df.apply(
-                lambda row: f"{self.excel_col_name(col_idx + 1)}{row.name + 2}", axis=1
-            )
+            if isinstance(col_idx, int):
+                df[f"COORDENADAS"] = df.apply(
+                    lambda row: f"{self.excel_col_name(col_idx + 1)}{row.name + 2}",
+                    axis=1,
+                )
+            else:
+                for i in col_idx:
+                    df[f"COORDENADAS_{i + 2}"] = df.apply(
+                        lambda row: f"{self.excel_col_name(i + 1)}{row.name + 2}",
+                        axis=1,
+                    )
             self.save_inconsistencies_file(df, sheet_name)
             return "SUCCESS: Inconsistencies guardadas correctamente"
         else:
@@ -136,8 +144,16 @@ class FirstValidationGroup:
             inconsistencies, col_idx, "ValidacionCaracteresEspaciales"
         )
 
-    def month_depends_on_date(self, date_idx: int, month_idx: int) -> str:
+    def month_depends_on_date(
+        self, date_idx: int, month_idx: int, exception_sheet: str, exception_idx: int
+    ) -> str:
         data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_df: pd.DataFrame = self.read_excel(
+            self.exception_file, exception_sheet
+        )
+        exception_list: pd.Series = (
+            exception_df.iloc[:, exception_idx].astype(str).dropna().to_list()
+        )
 
         ## Create s sub function to know the correct month depends on the number
         months: dict = {
@@ -156,17 +172,16 @@ class FirstValidationGroup:
         }
 
         ## Create a sub function to validate the consistency of the date
-        def validate_consistency(date: str, month: str) -> bool:
+        def validate_consistency(date: str, month: str, radicado: str) -> bool:
             date_parse = pd.to_datetime(date, format="%Y-%m-%d", errors="coerce")
             get_month = date_parse.month
             ## Call the dictionary
             standard_month = months.get(get_month)
-            return month == standard_month
+            return (month == standard_month) or (radicado in exception_list)
 
         data_frame["is_valid"] = data_frame.apply(
             lambda row: validate_consistency(
-                row.iloc[date_idx],
-                str(row.iloc[month_idx]),
+                row.iloc[date_idx], str(row.iloc[month_idx]), str(row.iloc[2])
             ),
             axis=1,
         )
@@ -232,6 +247,107 @@ class FirstValidationGroup:
         )
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(inconsistencies, col_idx, new_sheet)
+
+    def percentage_format(self, col_idx: int, can_be_null: bool) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+
+        def validate_format(value: str) -> bool:
+            value = value.replace(" ", "")
+            normal_percentage = bool(re.search(r"^\d+\.\d{1,2}$", value))
+            concat_percentage = bool(re.search(r"^\d{2}%;\d{2}%$", value))
+            if not can_be_null:
+                return normal_percentage or concat_percentage or value == "1"
+            else:
+                is_nan: bool = value.lower() == "nan"
+                return normal_percentage or concat_percentage or is_nan
+
+        data_frame["is_valid"] = (
+            data_frame.iloc[:, col_idx]
+            .astype(str)
+            .apply(lambda value: validate_format(value))
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, col_idx, "FormatoPorcentaje"
+        )
+
+    def identification_pagos_iaxis(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+
+        ## Create a  subfunction to validate the identification
+        def validate_identification(desempleo: str, identificador_pagos: str) -> bool:
+            if desempleo == "DESEMPLEO":
+                return identificador_pagos == "MANUAL"
+            else:
+                return bool(re.search(r"^[0-9]", identificador_pagos))
+
+        data_frame["is_valid"] = data_frame.apply(
+            lambda row: validate_identification(
+                str(row.iloc[12]), str(row.iloc[75])  # Desempleo and IdentificadorPagos
+            ),
+            axis=1,
+        )
+
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, [12, 75], "IdentificacionPagosIaxis"
+        )
+
+    def need_exception(
+        self,
+        col_idx: int,
+        exception_sheet: str,
+        exception_idx: int,
+        new_sheet: str,
+        list_sheet: str,
+        list_idx: int,
+    ) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        ## List data frame
+        list_df: pd.DataFrame = self.read_excel(self.exception_file, list_sheet)
+        list_col: list[str] = list_df.iloc[:, list_idx].dropna().astype(str).to_list()
+        ## Exception values
+        exception_df: pd.DataFrame = self.read_excel(
+            self.exception_file, exception_sheet
+        )
+        exception_col: list[str] = (
+            exception_df.iloc[:, exception_idx].dropna().astype(str).to_list()
+        )
+        file_col: pd.Series = data_frame.iloc[:, col_idx].astype(str)
+        data_frame["is_valid"] = (file_col.isin(exception_col)) | (
+            file_col.isin(list_col)
+        )
+
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, col_idx, new_sheet)
+
+    def banks_validation(self) -> str:
+        ## Data frames
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        list_df: pd.DataFrame = self.read_excel(self.exception_file, "LISTAS")
+        exception_df: pd.DataFrame = self.read_excel(
+            self.exception_file, "OTRAS EXCEPCIONES"
+        )
+        new_list_df: pd.DataFrame = list_df.iloc[:, 1:3].dropna()
+        exception_list: list[str] = (
+            exception_df.iloc[:, 1].dropna().astype(str).to_list()
+        )
+        col_1_name: str = data_frame.columns[64]
+        col_2_name: str = new_list_df.columns[0]
+        merged_df: pd.DataFrame = data_frame.merge(
+            new_list_df,
+            how="left",
+            left_on=col_1_name,
+            right_on=col_2_name,
+            suffixes=("_PAGOS", "_LISTAS"),
+        )
+        merged_df["is_valid"] = (merged_df.iloc[:, 65] == merged_df.iloc[:, -1]) | (
+            merged_df.iloc[:, 64].astype(str).isin(exception_list)
+        )
+        inconsistencies: pd.DataFrame = merged_df[~merged_df["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, [64, -1], "ValidacionBancos"
+        )
 
 
 ## Set global variables
@@ -333,8 +449,12 @@ def validate_month(params: dict) -> str:
         ## Set local variables
         date_idx = int(params.get("date_idx"))
         month_idx = int(params.get("month_idx"))
+        exception_sheet = params.get("exception_sheet")
+        exception_idx = int(params.get("exception_idx"))
 
-        validation: str = validation_group.month_depends_on_date(date_idx, month_idx)
+        validation: str = validation_group.month_depends_on_date(
+            date_idx, month_idx, exception_sheet, exception_idx
+        )
         return validation
     except Exception as e:
         return f"ERROR: {e}"
@@ -399,6 +519,52 @@ def validate_no_white_spaces(params: dict) -> str:
         return f"ERROR: {e}"
 
 
+def validate_percentage_format(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        can_be_null = bool(params.get("can_be_null"))
+
+        validation: str = validation_group.percentage_format(col_idx, can_be_null)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_identification_pagos_iaxis() -> str:
+    try:
+        validation: str = validation_group.identification_pagos_iaxis()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_need_exception(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        exception_sheet = params.get("exception_sheet")
+        exception_idx = int(params.get("exception_idx"))
+        new_sheet = params.get("new_sheet")
+        list_sheet = params.get("list_sheet")
+        list_idx = int(params.get("list_idx"))
+
+        validation: str = validation_group.need_exception(
+            col_idx, exception_sheet, exception_idx, new_sheet, list_sheet, list_idx
+        )
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_banks() -> str:
+    try:
+        validation: str = validation_group.banks_validation()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -408,7 +574,9 @@ if __name__ == "__main__":
     }
     main(params)
     params = {
-        "col_idx": "69",
-        "new_sheet": "CodigoOficinaBanco",
+        "list_sheet": "LISTAS",
+        "exception_sheet": "OTRAS EXCEPCIONES",
+        "col_idx": "64",
+        "list_idx": "1",
     }
-    print(validate_no_white_spaces(params))
+    print(validate_banks())
