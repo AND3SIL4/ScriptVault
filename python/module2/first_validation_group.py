@@ -273,17 +273,28 @@ class FirstValidationGroup:
 
     def identification_pagos_iaxis(self) -> str:
         data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_df: pd.DataFrame = self.read_excel(
+            self.exception_file, "OTRAS EXCEPCIONES"
+        )
+        exception_list: pd.Series = (
+            exception_df.iloc[:, 5].dropna().astype(str).to_list()
+        )
 
         ## Create a  subfunction to validate the identification
-        def validate_identification(desempleo: str, identificador_pagos: str) -> bool:
+        def validate_identification(
+            desempleo: str, identificador_pagos: str, radicado: str
+        ) -> bool:
             if desempleo == "DESEMPLEO":
                 return identificador_pagos == "MANUAL"
             else:
-                return bool(re.search(r"^[0-9]", identificador_pagos))
+                return (
+                    bool(re.search(r"^[0-9]", identificador_pagos))
+                    or radicado in exception_list
+                )
 
         data_frame["is_valid"] = data_frame.apply(
             lambda row: validate_identification(
-                str(row.iloc[12]), str(row.iloc[75])  # Desempleo and IdentificadorPagos
+                str(row.iloc[12]), str(row.iloc[75]), str(row.iloc[2])
             ),
             axis=1,
         )
@@ -472,6 +483,36 @@ class FirstValidationGroup:
         )
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(inconsistencies, [2, 7], "ValidacionSap")
+
+    def otros_documentos(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        polizas: list[str] = [
+            "3400004306",
+            "3400003706",
+            "3400004407",
+            "3400003704",
+        ]
+        allowed: list[str] = ["SI", "NO", "NA"]
+        data_frame = data_frame[data_frame.iloc[:, 11].astype(str) == "334"]
+
+        ## Sub function to validate the cell format
+        def validate_cell_format(poliza: str, value: str) -> bool:
+            if poliza in polizas:
+                return value in allowed
+            else:
+                return value == "nan"
+
+        data_frame["is_valid"] = data_frame.apply(
+            lambda row: validate_cell_format(
+                str(row.iloc[6]),  # Poliza
+                str(row.iloc[103]),  # Otros documentos
+            ),
+            axis=1,
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, [6, 103], "ValidacionOtrosDocumentos"
+        )
 
 
 ## Set global variables
@@ -744,6 +785,14 @@ def validate_sap() -> str:
         return f"ERROR: {e}"
 
 
+def validate_otros_documentos() -> str:
+    try:
+        validation: str = validation_group.otros_documentos()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -757,4 +806,4 @@ if __name__ == "__main__":
         "option": "REACTIVADO",
         "new_sheet": "ValidacionReactivado",
     }
-    print(validate_sap())
+    print(validate_otros_documentos())
