@@ -450,6 +450,29 @@ class FirstValidationGroup:
             inconsistencies, 110, "ValidacionEventoCinco"
         )
 
+    def sap(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_df: pd.DataFrame = self.read_excel(
+            self.exception_file, "OTRAS EXCEPCIONES"
+        )
+        exception_list: list[str] = (
+            exception_df.iloc[:, 4].dropna().astype(str).to_list()
+        )
+
+        ## Sub function for making the validation
+        def validate_number(radicado: str, sap: str) -> bool:
+            return sap.isdigit() or radicado in exception_list
+
+        data_frame["is_valid"] = data_frame.apply(
+            lambda row: validate_number(
+                str(row.iloc[2]),  # Radicado
+                str(row.iloc[77]),  # SAP
+            ),
+            axis=1,
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, [2, 7], "ValidacionSap")
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -713,6 +736,14 @@ def validate_evento_5() -> str:
         return f"ERROR: {e}"
 
 
+def validate_sap() -> str:
+    try:
+        validation: str = validation_group.sap()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -726,4 +757,4 @@ if __name__ == "__main__":
         "option": "REACTIVADO",
         "new_sheet": "ValidacionReactivado",
     }
-    print(validate_evento_5())
+    print(validate_sap())
