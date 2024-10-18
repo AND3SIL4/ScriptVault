@@ -349,6 +349,107 @@ class FirstValidationGroup:
             inconsistencies, [64, -1], "ValidacionBancos"
         )
 
+    def mandatory_desempleo(self, new_sheet: str, col_idx: int) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+
+        ## Sub function to validate
+        def validation(desempleo: str, character: str) -> bool:
+            ramos: list[str] = ["DESEMPLEO"]
+            maybe: list[str] = ["VIDA GRUPO DEUDORES"]
+            is_desempleo = desempleo in ramos
+            is_valid_character = character == "SI" or character == "NO"
+            first_validation = is_desempleo and is_valid_character
+            second_validation = not is_desempleo and character == "nan"
+            third_validation = (desempleo in maybe and is_valid_character) or (
+                desempleo in maybe and character == "nan"
+            )
+            return first_validation or second_validation or third_validation
+
+        data_frame["is_valid"] = data_frame.apply(
+            lambda row: validation(
+                str(row.iloc[12]),  # Ramo
+                str(row.iloc[col_idx]),  # Special column
+            ),
+            axis=1,
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, [12, col_idx], new_sheet)
+
+    def no_empty(self, col_idx: int, option: str, new_sheet: str) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+
+        ## Sub function to validate
+
+        def validate_empty(value: str) -> bool:
+            return value == "nan" or value == option
+
+        data_frame["is_valid"] = data_frame.iloc[:, col_idx].apply(
+            lambda value: validate_empty(str(value))
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, [col_idx], new_sheet)
+
+    def check_sarlaf(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+
+        ## Sub function to validate
+        def validate_sarlaf(sarlaf: str, bien_diligenciado: str) -> bool:
+            if sarlaf == "SI":
+                return bien_diligenciado == "X"
+            else:
+                return bien_diligenciado == "nan"
+
+        data_frame["is_valid"] = data_frame.apply(
+            lambda row: validate_sarlaf(
+                str(row.iloc[85]), str(row.iloc[86])  # Special column
+            ),
+            axis=1,
+        )
+
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, [85, 86], "CheckBeneficiarioSarlaf"
+        )
+
+    def fecha_vencimiento(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_df: pd.DataFrame = self.read_excel(
+            self.exception_file, "OTRAS EXCEPCIONES"
+        )
+        exception_list: list[str] = (
+            exception_df.iloc[:, 3].dropna().astype(str).to_list()
+        )
+
+        ## Sub function to validate the expiration date
+        def validate_date(ramo: str, expiration_date: str) -> bool:
+            if ramo == "DESEMPLEO":
+                return bool(re.search(r"^\d{2}/\d{2}/\d{4};\d{1,12}$", expiration_date))
+            else:
+                return (expiration_date == "nan") or ramo in exception_list
+
+        data_frame["is_valid"] = data_frame.apply(
+            lambda row: validate_date(
+                str(row.iloc[12]),  ## Ramo
+                str(row.iloc[97]),  ## Fecha vencimiento
+            ),  # Ramo
+            axis=1,
+        )
+
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, [12, 97], "FechaVencimiento"
+        )
+
+    def evento_cinco(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        data_frame["is_valid"] = data_frame["EVENTO 5"].apply(
+            lambda value: (pd.isna(value)) | (value == "SI" or value == "NO")
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, 110, "ValidacionEventoCinco"
+        )
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -565,6 +666,53 @@ def validate_banks() -> str:
         return f"ERROR: {e}"
 
 
+def validate_mandatory_desempleo(params: dict) -> str:
+    try:
+        ## Set local variables
+        new_sheet = params.get("new_sheet")
+        col_idx = int(params.get("col_idx"))
+        validation: str = validation_group.mandatory_desempleo(new_sheet, col_idx)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_not_empty(params: dict) -> str:
+    try:
+        ## Set local variables
+        col_idx = int(params.get("col_idx"))
+        option = params.get("option")
+        new_sheet = params.get("new_sheet")
+        validation: str = validation_group.no_empty(col_idx, option, new_sheet)
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_check_sarlaf() -> str:
+    try:
+        validation: str = validation_group.check_sarlaf()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_fecha_vencimiento() -> str:
+    try:
+        validation: str = validation_group.fecha_vencimiento()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_evento_5() -> str:
+    try:
+        validation: str = validation_group.evento_cinco()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -574,9 +722,8 @@ if __name__ == "__main__":
     }
     main(params)
     params = {
-        "list_sheet": "LISTAS",
-        "exception_sheet": "OTRAS EXCEPCIONES",
-        "col_idx": "64",
-        "list_idx": "1",
+        "col_idx": "100",
+        "option": "REACTIVADO",
+        "new_sheet": "ValidacionReactivado",
     }
-    print(validate_banks())
+    print(validate_evento_5())
