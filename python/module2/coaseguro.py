@@ -1,4 +1,5 @@
 import pandas as pd  # type: ignore
+import numpy as np  # type: ignore
 from typing import Optional
 import os
 
@@ -118,6 +119,74 @@ class Coaseguro:
             inconsistencies, 48, "ValidacionValorPositiva"
         )
 
+    def positiva_calculados(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        ## Columns
+        vr_movimiento: pd.Series = data_frame.iloc[:, 45]
+        porcentaje_positiva: pd.Series = data_frame.iloc[:, 48]
+        vr_positiva: pd.Series = data_frame.iloc[:, 49].astype(float).round(2)
+
+        data_frame["POSITIVA_CALCULADOS"] = (
+            (vr_movimiento * porcentaje_positiva).astype(float).round(2)
+        )
+        data_frame["VALIDACION"] = data_frame["POSITIVA_CALCULADOS"] == vr_positiva
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["VALIDACION"]]
+        ## Save inconsistencies into file
+        return self.validate_inconsistencies(
+            inconsistencies, [49, 111], "ValidacionPositivaCalculados"
+        )
+
+    def coasegura_calculado(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        vr_100: pd.Series = data_frame.iloc[:, 45].astype(float).round(2)
+        porcentaje_coaseguradora: pd.Series = data_frame.iloc[:, 50]
+        vr_coaseguradora: pd.Series = data_frame.iloc[:, 51]
+
+        ## Subfunction to validate and fix the coaseguradora percentage
+        def fix_coaseguradora_percentage(value: str) -> float:
+            try:
+                # Eliminar caracteres innecesarios
+                value = value.replace("%", "").replace(" ", "")
+                # Si el valor contiene un ';', procesarlo como suma
+                if ";" in value:
+                    values = value.split(";")
+                    # Convertir los dos valores y calcular el resultado
+                    total_percentage = int(values[0]) + int(values[1])
+                    result = total_percentage / 100.0
+                else:
+                    # Si no contiene ';', convertir directamente a flotante
+                    result = float(value)
+                return result
+            except (ValueError, IndexError) as e:
+                # Si hay algún error en la conversión o el formato, manejarlo aquí
+                print(f"Error al procesar el valor '{value}': {e}")
+                return 0.0  # Devolver un valor por defecto en caso de error
+
+        data_frame = data_frame[data_frame.iloc[:, 42] == "COASEGURO"]
+
+        data_frame["PORCENTAJE_COASEGURADORA"] = porcentaje_coaseguradora.astype(
+            str
+        ).apply(lambda value: fix_coaseguradora_percentage(value))
+
+        data_frame["COASEGURADORA_CALCULADO"] = (
+            data_frame["PORCENTAJE_COASEGURADORA"] * vr_100
+        )
+
+        ## Sub function to validate the belonging
+        def validate_belonging(vr_coaseguro: float, coaseguro_calculado: float) -> bool:
+            return round(vr_coaseguro, 2) == round(coaseguro_calculado, 2)
+
+        data_frame["VR_COASEGURO_VS_COASEGURO_CALCULADO"] = data_frame.apply(
+            lambda row: validate_belonging(float(row.iloc[51]), float(row.iloc[112])),
+            axis=1,
+        )
+        inconsistencies: pd.DataFrame = data_frame[
+            ~data_frame["VR_COASEGURO_VS_COASEGURO_CALCULADO"]
+        ]
+        return self.validate_inconsistencies(
+            inconsistencies, [51, 112], "ValidacionCoaseguroCalculado"
+        )
+
 
 ##* INITIALIZE THE VARIABLE TO INSTANCE THE MAIN CLASS
 coaseguro: Optional[Coaseguro] = None
@@ -161,6 +230,24 @@ def validate_data_from_coaseguro() -> str:
         return f"ERROR: {e}"
 
 
+def validate_positiva_calculado() -> str:
+    try:
+        ## Set local variables
+        validation: str = coaseguro.positiva_calculados()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_coasegura_calculado() -> str:
+    try:
+        ## Set local variables
+        validation: str = coaseguro.coasegura_calculado()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -174,4 +261,4 @@ if __name__ == "__main__":
         "option": "REACTIVADO",
         "new_sheet": "ValidacionReactivado",
     }
-    print(validate_data_from_coaseguro())
+    print(validate_coasegura_calculado())
