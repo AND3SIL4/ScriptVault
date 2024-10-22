@@ -78,14 +78,15 @@ class Coaseguro:
         lista: list[str] = ["PREVISORA; MUNDIAL", "GENERAL", "MUNDIAL", "PREVISORA"]
 
         ## Sub function to validate if is coaseguro
-        def is_coaseguro_helper(coaseguro: str, porcentaje_positiva: str) -> bool:
-            if porcentaje_positiva != "1":
+        def is_coaseguro_helper(coaseguro, porcentaje_positiva) -> bool:
+            if porcentaje_positiva != 1.0:
+                print(coaseguro, porcentaje_positiva)
+                print(type(coaseguro), type(porcentaje_positiva))
                 return coaseguro in lista
-            else:
-                return coaseguro == "nan"
+            return str(coaseguro) == "nan"
 
         data_frame["is_valid"] = data_frame.apply(
-            lambda row: is_coaseguro_helper(str(row.iloc[47]), str(row.iloc[48])),
+            lambda row: is_coaseguro_helper(row.iloc[47], row.iloc[48]),
             axis=1,
         )
 
@@ -140,7 +141,6 @@ class Coaseguro:
         data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
         vr_100: pd.Series = data_frame.iloc[:, 45].astype(float).round(2)
         porcentaje_coaseguradora: pd.Series = data_frame.iloc[:, 50]
-        vr_coaseguradora: pd.Series = data_frame.iloc[:, 51]
 
         ## Subfunction to validate and fix the coaseguradora percentage
         def fix_coaseguradora_percentage(value: str) -> float:
@@ -185,6 +185,64 @@ class Coaseguro:
         ]
         return self.validate_inconsistencies(
             inconsistencies, [51, 112], "ValidacionCoaseguroCalculado"
+        )
+
+    def valor_cien_porciento_calculado(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        ## Columns
+        vr_movimiento: pd.Series = data_frame.iloc[:, 45]
+        porcentaje_positiva: pd.Series = data_frame.iloc[:, 48]
+        vr_100: pd.Series = data_frame.iloc[:, 45].astype(float).round(2)
+        porcentaje_coaseguradora: pd.Series = data_frame.iloc[:, 50]
+
+        data_frame["POSITIVA_CALCULADOS"] = (
+            (vr_movimiento * porcentaje_positiva).astype(float).round(2)
+        ).fillna(0)
+
+        ## Subfunction to validate and fix the coaseguradora percentage
+        def fix_coaseguradora_percentage(value: str) -> float:
+            try:
+                # Eliminar caracteres innecesarios
+                value = value.replace("%", "").replace(" ", "")
+                # Si el valor contiene un ';', procesarlo como suma
+                if ";" in value:
+                    values = value.split(";")
+                    # Convertir los dos valores y calcular el resultado
+                    total_percentage = int(values[0]) + int(values[1])
+                    result = total_percentage / 100.0
+                else:
+                    # Si no contiene ';', convertir directamente a flotante
+                    result = float(value)
+                return result
+            except (ValueError, IndexError) as e:
+                # Si hay algún error en la conversión o el formato, manejarlo aquí
+                print(f"Error al procesar el valor '{value}': {e}")
+                return 0.0  # Devolver un valor por defecto en caso de error
+
+        data_frame["PORCENTAJE_COASEGURADORA"] = (
+            porcentaje_coaseguradora.astype(str)
+            .apply(lambda value: fix_coaseguradora_percentage(value))
+            .fillna(0)
+        )
+
+        data_frame["COASEGURADORA_CALCULADO"] = (
+            data_frame["PORCENTAJE_COASEGURADORA"] * vr_100
+        ).fillna(0)
+
+        data_frame["VALOR_CIEN_PORCIENTO_CALCULADO"] = (
+            data_frame["POSITIVA_CALCULADOS"] + data_frame["COASEGURADORA_CALCULADO"]
+        ).fillna(0)
+
+        data_frame["VR_CALCULADO_VS_VR_100_PORCIENTO"] = (
+            data_frame["VALOR_CIEN_PORCIENTO_CALCULADO"] == vr_100
+        )
+
+        inconsistencies: pd.DataFrame = data_frame[
+            ~data_frame["VR_CALCULADO_VS_VR_100_PORCIENTO"]
+        ]
+
+        return self.validate_inconsistencies(
+            inconsistencies, [45, 111, 113], "ValorCienPorcientoCalculado"
         )
 
 
@@ -248,6 +306,15 @@ def validate_coasegura_calculado() -> str:
         return f"ERROR: {e}"
 
 
+def validate_total_valor_calculado() -> str:
+    try:
+        ## Set local variables
+        validation: str = coaseguro.valor_cien_porciento_calculado()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -261,4 +328,4 @@ if __name__ == "__main__":
         "option": "REACTIVADO",
         "new_sheet": "ValidacionReactivado",
     }
-    print(validate_coasegura_calculado())
+    print(validate_coaseguro_percentage())
