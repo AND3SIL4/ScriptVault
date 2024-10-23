@@ -258,19 +258,18 @@ class Coaseguro:
 
         is_valid = vr_cien_porciento == total_calculado
 
-        totales: pd.DataFrame = pd.DataFrame(
-            {
-                "VR_CIEN_PORCIENTO": [vr_cien_porciento],
-                "VR_POSITIVA": [vr_positiva],
-                "VR_COASEGURADORA": [vr_coaseguradora],
-                "TOTAL_CALCULADO": [total_calculado],
-                "is_valid": [is_valid],
-            },
-            index=["Total"],
+        totales = {
+            "VR_CIEN_PORCIENTO": vr_cien_porciento,
+            "VR_POSITIVA": vr_positiva,
+            "VR_COASEGURADORA": vr_coaseguradora,
+            "TOTAL_CALCULADO": total_calculado,
+            "IS_VALID": is_valid,
+        }
+        new_df: pd.DataFrame = pd.DataFrame([totales])
+        inconsistencies: pd.DataFrame = new_df[~new_df["IS_VALID"].astype(bool)]
+        return self.validate_inconsistencies(
+            inconsistencies, [45, 49, 51], "ValidacionSumasTotales"
         )
-
-        inconsistencies: pd.DataFrame = totales[~totales["is_valid"]]
-        inconsistencies.to_excel(self.inconsistencies_file, index=False)
 
 
 ##* INITIALIZE THE VARIABLE TO INSTANCE THE MAIN CLASS
