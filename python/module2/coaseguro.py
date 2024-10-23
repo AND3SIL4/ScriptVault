@@ -109,10 +109,12 @@ class Coaseguro:
         )
 
         def validate_equals(pagos: str, coaseguro: str) -> bool:
-            return pagos == coaseguro
+            print(pagos, coaseguro)
+            print(type(pagos), type(coaseguro))
+            return float(pagos) == float(coaseguro)
 
         merged_df["is_valid"] = merged_df.apply(
-            lambda row: validate_equals(str(row.iloc[48]), str(row.iloc[114])),
+            lambda row: validate_equals(float(row.iloc[48]), float(row.iloc[114])),
             axis=1,
         )
         inconsistencies: pd.DataFrame = merged_df[~merged_df["is_valid"]]
@@ -328,4 +330,4 @@ if __name__ == "__main__":
         "option": "REACTIVADO",
         "new_sheet": "ValidacionReactivado",
     }
-    print(validate_coaseguro_percentage())
+    print(validate_data_from_coaseguro())
