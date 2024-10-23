@@ -94,33 +94,42 @@ class Consecutivo:
         return filtered_df  ##Return df filtered
 
     def consecutivo(self, cut_off_date: str) -> str:
-        ## Initial data frames
+        ## Pagos data frame
         pagos_file: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        ## Consecutivo data frame
         consecutivo_file: pd.DataFrame = self.read_excel(
             self.consecutivo_sap_file, "NUEMRO DE PAGO"
         )
+        ## Information from EXCEPTION FILE
         list_df: pd.DataFrame = self.read_excel(self.exception_file, "CONSECUTIVO SAP")
+        ## Consecutivo data frame after being filtered
         consecutivo_df = self.filter_file(consecutivo_file, cut_off_date, 0)
+        ## Pagos data frame after being filtered
         pagos_df = self.filter_file(pagos_file, cut_off_date, 72)
 
-        ## Local variables
+        ##* Local variables
         initial_consecutivo: int = int(list_df.iloc[0, 1])
         final_consecutivo: int = int(list_df.iloc[0, 2])
+        ## List of values from the EXCEPTION FILE TODO: Validate first
         pending_list: list[int] = list_df.iloc[:, 0].dropna().astype(int).to_list()
-        consecutivos_pagos: list = (
-            pagos_df.iloc[:, 73].drop_duplicates().to_list()
-        )  ##! From Pagos file
-        length_consecutivo_pagos: int = int(len(consecutivos_pagos))
+        ## List of values from PAGOS FILE without duplicates
+        consecutivos_pagos: list = pagos_df.iloc[:, 73].drop_duplicates().to_list()
 
+        ## 1. Make validation of pending list first
+        for pending_value in pending_list:
+            if pending_value in consecutivos_pagos:
+                print(f"Valor pendiente {pending_value} encontrado en PAGOS")
+                consecutivos_pagos.remove(pending_value)
+                pending_list.remove(pending_value)
+
+        ## Size of the total different values after deleting matching values
+        length_consecutivo_pagos = int(len(consecutivos_pagos))
+        ## Get the list with autoincrement (+1) starts from before final consecutivo
         consecutivos_to_validate: list[int] = []
         for consecutivo in range(length_consecutivo_pagos):
             final_consecutivo += 1
             consecutivos_to_validate.append(final_consecutivo)
 
-        ## Validate the if the pending list is in the current consecutivo list
-        missing_before_values = [
-            value for value in pending_list if value not in consecutivos_to_validate
-        ]
         ## Create new data frames to cross over files
         consecutivo_cross: pd.DataFrame = pd.DataFrame(
             consecutivos_to_validate, columns=["CONSECUTIVO_FROM_CONSECUTIVO"]
@@ -157,11 +166,11 @@ class Consecutivo:
             inconsistencies_validation.iloc[:, 3] != "RED ASISTENCIAL"
         ]
         append_list = (
-            missing_before_values
-            + inconsistencies_validation.iloc[:, 0].dropna().to_list()
+            pending_list + inconsistencies_validation.iloc[:, 0].dropna().to_list()
         )
+        print(consecutivos_pagos)
         data_updated: bool = self.update_data(
-            consecutivos_to_validate[0], consecutivos_to_validate[-1], append_list
+            consecutivos_pagos[0], consecutivos_pagos[-1], append_list
         )
         ## Save the inconsistencies
         return (
@@ -246,5 +255,5 @@ if __name__ == "__main__":
         "consecutivo_sap_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\CONSECUTIVO SAP 2023.xlsx",
     }
     main(params)
-    params = {"cut_off_date": "30/08/2024"}
+    params = {"cut_off_date": "30/07/2024"}
     print(validate_consecutivo_sap(params))
