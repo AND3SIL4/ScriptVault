@@ -247,6 +247,31 @@ class Coaseguro:
             inconsistencies, [45, 111, 113], "ValorCienPorcientoCalculado"
         )
 
+    def validate_sums(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        ## 45, 49, 51
+        vr_cien_porciento = round(float(data_frame.iloc[:, 45].astype(float).sum()), 2)
+        vr_positiva = round(float(data_frame.iloc[:, 49].astype(float).sum()), 2)
+        vr_coaseguradora = round(float(data_frame.iloc[:, 51].astype(float).sum()), 2)
+
+        total_calculado = vr_positiva + vr_coaseguradora
+
+        is_valid = vr_cien_porciento == total_calculado
+
+        totales: pd.DataFrame = pd.DataFrame(
+            {
+                "VR_CIEN_PORCIENTO": [vr_cien_porciento],
+                "VR_POSITIVA": [vr_positiva],
+                "VR_COASEGURADORA": [vr_coaseguradora],
+                "TOTAL_CALCULADO": [total_calculado],
+                "is_valid": [is_valid],
+            },
+            index=["Total"],
+        )
+
+        inconsistencies: pd.DataFrame = totales[~totales["is_valid"]]
+        inconsistencies.to_excel(self.inconsistencies_file, index=False)
+
 
 ##* INITIALIZE THE VARIABLE TO INSTANCE THE MAIN CLASS
 coaseguro: Optional[Coaseguro] = None
@@ -317,6 +342,15 @@ def validate_total_valor_calculado() -> str:
         return f"ERROR: {e}"
 
 
+def validate_sums() -> str:
+    try:
+        ## Set local variables
+        validation: str = coaseguro.validate_sums()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
@@ -330,4 +364,4 @@ if __name__ == "__main__":
         "option": "REACTIVADO",
         "new_sheet": "ValidacionReactivado",
     }
-    print(validate_data_from_coaseguro())
+    print(validate_sums())

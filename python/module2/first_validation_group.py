@@ -514,6 +514,24 @@ class FirstValidationGroup:
             inconsistencies, [6, 103], "ValidacionOtrosDocumentos"
         )
 
+    def concepto(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_df: pd.DataFrame = self.read_excel(self.exception_file, "LISTAS")
+        exception_list: list[str] = (
+            exception_df["CONCEPTO"].dropna().astype(str).to_list()
+        )
+
+        ## Sub function to validate the concepto
+        def validate_concepto(concepto: str) -> bool:
+            return concepto in exception_list
+
+        data_frame["is_valid"] = data_frame["CONCEPTO"].apply(
+            lambda value: validate_concepto(str(value))
+        )
+
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(inconsistencies, 15, "ValidacionConcepto")
+
 
 ## Set global variables
 validation_group: Optional[FirstValidationGroup] = None
@@ -792,6 +810,12 @@ def validate_otros_documentos() -> str:
     except Exception as e:
         return f"ERROR: {e}"
 
+def validate_concepto() -> str:
+    try:
+        validation: str = validation_group.concepto()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
 
 if __name__ == "__main__":
     params = {
@@ -806,4 +830,4 @@ if __name__ == "__main__":
         "option": "REACTIVADO",
         "new_sheet": "ValidacionReactivado",
     }
-    print(validate_otros_documentos())
+    print(validate_concepto())

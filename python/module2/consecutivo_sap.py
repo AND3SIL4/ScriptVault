@@ -246,5 +246,5 @@ if __name__ == "__main__":
         "consecutivo_sap_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\CONSECUTIVO SAP 2023.xlsx",
     }
     main(params)
-    params = {"cut_off_date": "30/07/2024"}
+    params = {"cut_off_date": "30/08/2024"}
     print(validate_consecutivo_sap(params))
