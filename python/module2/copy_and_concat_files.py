@@ -39,6 +39,9 @@ def main(params: dict):
         desempleo_df = pd.read_excel(
             desempleo_file, sheet_name=sheet_desempleo, engine="openpyxl"
         )
+        otros_gastos: pd.DataFrame = pd.read_excel(
+            otros_ramos_file, sheet_name="OGDS", engine="openpyxl"
+        )
 
         ##Convert the column to date type
         otros_ramos_df.iloc[:, col_idx] = pd.to_datetime(
@@ -58,15 +61,18 @@ def main(params: dict):
             (desempleo_df.iloc[:, col_idx] >= begin_date)
             & (desempleo_df.iloc[:, col_idx] <= cut_off_date)
         ]
-        otros_ramos_filtered = otros_ramos_filtered.iloc[:, :111]
-        desempleo_filtered = desempleo_filtered.iloc[:, :111]
+        otros_ramos_filtered: pd.DataFrame = otros_ramos_filtered.iloc[:, :111]
+        desempleo_filtered: pd.DataFrame = desempleo_filtered.iloc[:, :111]
+        otros_gastos: pd.DataFrame = otros_gastos.iloc[:, :111]
+
+        ## Unique cols name
+        desempleo_filtered.columns = otros_ramos_filtered.columns
+        otros_gastos.columns = otros_ramos_filtered.columns
 
         ##Link the files previously filtered
         base_pagos = pd.concat(
-            [desempleo_filtered, otros_ramos_filtered], ignore_index=True
+            [desempleo_filtered, otros_ramos_filtered, otros_gastos], ignore_index=True
         )
-
-        base_pagos = base_pagos.iloc[:, :111]
 
         ##Save changes into a temp folder
         base_pagos.to_excel(destination_path, index=False, sheet_name="PAGOS")
