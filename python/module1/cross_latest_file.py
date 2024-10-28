@@ -27,10 +27,11 @@ def main(params: dict) -> None:
             return "ERROR: an input required param is missing"
 
         ##Set the dates for filtering the files
-        cut_off_date = pd.to_datetime(cut_date, format="%d/%m/%Y")
         year = datetime.today().year
         date = f"01/01/{year}"
         initial_date = pd.to_datetime(date, format="%d/%m/%Y")
+        cut = pd.to_datetime(cut_date, format="%d/%m/%Y")
+        cut_off_date = cut - pd.DateOffset(months=1)
 
         ##Load the work books needed
         ##Current base reparto
@@ -50,6 +51,9 @@ def main(params: dict) -> None:
             (latest_file_df.iloc[:, col_idx] > initial_date)
             & (latest_file_df.iloc[:, col_idx] < cut_off_date)
         ]
+        file_filtered: pd.DataFrame = file_filtered.iloc[:, :111]
+
+        latest_filtered.columns = file_filtered.columns
 
         ##Key name
         key_name = "SINIESTRO+RADICADO+AMPARO+RESERVA"
@@ -78,7 +82,7 @@ def main(params: dict) -> None:
             ~file_filtered[key_name].isin(latest_filtered[key_name])
         ].copy()
         if not file_not_in_latest.empty:
-            file_not_in_latest["file_to_find"] = "Ejecución actual"
+            file_not_in_latest["FILE_TO_FIND"] = "ARCHIVO ACTUAL"
 
         latest_not_in_file = latest_filtered[
             ~latest_filtered[key_name].isin(file_filtered[key_name])
@@ -88,7 +92,7 @@ def main(params: dict) -> None:
         inconsistencies = pd.DataFrame()
 
         if not latest_not_in_file.empty:
-            latest_not_in_file["file_to_find"] = "Ejecución anterior"
+            latest_not_in_file["FILE_TO_FIND"] = "ARCHIVO ANTERIOR"
 
         if not file_not_in_latest.empty and not latest_not_in_file.empty:
             # Combine the results of both mismatches
@@ -156,10 +160,10 @@ if __name__ == "__main__":
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
         "inconsistencias_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Inconsistencias\InconBaseReparto.xlsx",
         "sheet_name": "CASOS NUEVOS",
-        "latest_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Historico base reparto\BASE DE REPARTO 2024 CIERRE JULIO.xlsx",
+        "latest_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\OutputFolder\Historico base reparto\BASE DE REPARTO 092024.xlsx",
         "sheet_latest_name": "CASOS NUEVOS",
         "col_idx": "24",
-        "cut_date": "30/07/2024",
+        "cut_date": "25/10/2024",
     }
 
     print(main(params))
