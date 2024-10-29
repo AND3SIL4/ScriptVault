@@ -26,22 +26,36 @@ def main(params: dict):
                 col_idx,
             ]
         ):
-            return "Error: an input required is missing"
+            return "ERROR: an input required param is missing"
 
         ##Make a date type to filter the files
         begin_date = pd.to_datetime(begin_date, format="%d/%m/%Y")
         cut_off_date = pd.to_datetime(cut_off_date, format="%d/%m/%Y")
 
         ##Read the books and make a filter
-        otros_ramos_df = pd.read_excel(
+        otros_ramos_df: pd.DataFrame = pd.read_excel(
             otros_ramos_file, sheet_name=sheet_otros_ramos, engine="openpyxl"
         )
-        desempleo_df = pd.read_excel(
+        desempleo_df: pd.DataFrame = pd.read_excel(
             desempleo_file, sheet_name=sheet_desempleo, engine="openpyxl"
         )
         otros_gastos: pd.DataFrame = pd.read_excel(
             otros_ramos_file, sheet_name="OGDS", engine="openpyxl"
         )
+
+        otros_ramos_df: pd.DataFrame = otros_ramos_df.dropna(
+            subset=[otros_ramos_df.columns[0]]
+        ).iloc[:, :111]
+        desempleo_df: pd.DataFrame = desempleo_df.dropna(
+            subset=[desempleo_df.columns[1]]
+        ).iloc[:, :111]
+        otros_gastos: pd.DataFrame = otros_gastos.dropna(
+            subset=[otros_gastos.columns[0]]
+        ).iloc[:, :111]
+
+        ## Unique cols name
+        desempleo_df.columns = otros_ramos_df.columns
+        otros_gastos.columns = otros_ramos_df.columns
 
         ##Convert the column to date type
         otros_ramos_df.iloc[:, col_idx] = pd.to_datetime(
@@ -61,13 +75,6 @@ def main(params: dict):
             (desempleo_df.iloc[:, col_idx] >= begin_date)
             & (desempleo_df.iloc[:, col_idx] <= cut_off_date)
         ]
-        otros_ramos_filtered: pd.DataFrame = otros_ramos_filtered.iloc[:, :111]
-        desempleo_filtered: pd.DataFrame = desempleo_filtered.iloc[:, :111]
-        otros_gastos: pd.DataFrame = otros_gastos.iloc[:, :111]
-
-        ## Unique cols name
-        desempleo_filtered.columns = otros_ramos_filtered.columns
-        otros_gastos.columns = otros_ramos_filtered.columns
 
         ##Link the files previously filtered
         base_pagos = pd.concat(
@@ -80,3 +87,17 @@ def main(params: dict):
 
     except Exception as e:
         return f"Error: {e}"
+
+
+if __name__ == "__main__":
+    params = {
+        "otros_ramos_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\BDD PAGOS RECONOCIMIENTO POLIZAS DE VIDA PAGOS 2024 - OTROS RAMOS.xlsx",
+        "desempleo_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\BDD PAGOS RECONOCIMIENTO POLIZAS DE VIDA – PAGOS 2024 - DESEMPLEO.xlsx",
+        "sheet_otros_ramos": "2024",
+        "sheet_desempleo": "2024 DESEMPLEO",
+        "begin_date": "01/01/2024",
+        "cut_off_date": "28/10/2024",
+        "col_idx": 72,
+        "destination_path": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE PAGOS.xlsx",
+    }
+    print(main(params))

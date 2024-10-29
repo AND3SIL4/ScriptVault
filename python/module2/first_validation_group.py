@@ -202,10 +202,8 @@ class FirstValidationGroup:
 
     def acuerdo_range(self, col_idx: int) -> str:
         data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
-        data_frame["is_valid"] = (
-            data_frame.iloc[:, col_idx]
-            .astype(int)
-            .apply(lambda value: value >= 1 and value <= 30)
+        data_frame["is_valid"] = data_frame.iloc[:, col_idx].apply(
+            lambda value: 1 <= value <= 30
         )
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(
@@ -472,7 +470,11 @@ class FirstValidationGroup:
 
         ## Sub function for making the validation
         def validate_number(radicado: str, sap: str) -> bool:
-            return sap.isdigit() or radicado in exception_list
+            try:
+                int(sap)
+                return True
+            except ValueError:
+                return radicado in exception_list
 
         data_frame["is_valid"] = data_frame.apply(
             lambda row: validate_number(
@@ -482,7 +484,7 @@ class FirstValidationGroup:
             axis=1,
         )
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
-        return self.validate_inconsistencies(inconsistencies, [2, 7], "ValidacionSap")
+        return self.validate_inconsistencies(inconsistencies, 77, "ValidacionSap")
 
     def otros_documentos(self) -> str:
         data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
@@ -810,12 +812,14 @@ def validate_otros_documentos() -> str:
     except Exception as e:
         return f"ERROR: {e}"
 
+
 def validate_concepto() -> str:
     try:
         validation: str = validation_group.concepto()
         return validation
     except Exception as e:
         return f"ERROR: {e}"
+
 
 if __name__ == "__main__":
     params = {
@@ -826,8 +830,6 @@ if __name__ == "__main__":
     }
     main(params)
     params = {
-        "col_idx": "100",
-        "option": "REACTIVADO",
-        "new_sheet": "ValidacionReactivado",
+        "col_idx": "30",
     }
-    print(validate_concepto())
+    print(validate_sap())

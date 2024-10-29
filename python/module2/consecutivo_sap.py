@@ -80,18 +80,27 @@ class Consecutivo:
         self, data_frame: pd.DataFrame, cut_off_date: str, col_idx: int
     ) -> pd.DataFrame:
         """Method to filter the file according to the defined criteria"""
-        ## Parse date and get the
+
+        # Parse the cutoff date to get the month and year
         date: pd.Timestamp = pd.to_datetime(
             cut_off_date, format="%d/%m/%Y", errors="coerce"
         )
         year = date.year
         month = date.month
-        ## Filter file
+
+        # Get the column name using the index position (col_idx)
+        col_name = data_frame.columns[col_idx]
+
+        # Convert the specified column to datetime type and assign it back to the DataFrame
+        data_frame[col_name] = pd.to_datetime(data_frame[col_name], errors="coerce")
+
+        # Filter DataFrame by month and year
         filtered_df: pd.DataFrame = data_frame[
-            (data_frame.iloc[:, col_idx].dt.month == month)
-            & (data_frame.iloc[:, col_idx].dt.year == year)
+            (data_frame[col_name].dt.month == month)
+            & (data_frame[col_name].dt.year == year)
         ]
-        return filtered_df  ##Return df filtered
+
+        return filtered_df  # Return the filtered DataFrame
 
     def consecutivo(self, cut_off_date: str) -> str:
         ## Pagos data frame
@@ -255,5 +264,5 @@ if __name__ == "__main__":
         "consecutivo_sap_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\InputFolder\CONSECUTIVO SAP 2023.xlsx",
     }
     main(params)
-    params = {"cut_off_date": "30/07/2024"}
+    params = {"cut_off_date": "30/10/2024"}
     print(validate_consecutivo_sap(params))
