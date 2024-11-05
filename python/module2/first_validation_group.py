@@ -65,7 +65,7 @@ class FirstValidationGroup:
             else:
                 for i in col_idx:
                     df[f"COORDENADAS_{i + 2}"] = df.apply(
-                        lambda row: f"{self.excel_col_name(i + 1)}{row.name + 2}",
+                        lambda row: f"{self.excel_col_name(i+1)}{row.name + 2}",
                         axis=1,
                     )
             self.save_inconsistencies_file(df, sheet_name)
@@ -90,8 +90,19 @@ class FirstValidationGroup:
 
     def number_type(self, col_idx: int) -> str:
         data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_df: pd.DataFrame = self.read_excel(self.exception_file, "LISTAS")
+        list_exception: list = exception_df["SAP"].dropna().astype(str).tolist()
+
+        def validate_with_exception_list(value: str) -> bool:
+            value = value.replace(".", "")
+            try:
+                int(value)
+                return True
+            except ValueError:
+                return value in list_exception
+
         data_frame["is_valid"] = data_frame.iloc[:, col_idx].apply(
-            lambda x: str(x).replace(".", "").isdigit() if pd.notna(x) else False
+            lambda value: validate_with_exception_list(value)
         )
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(inconsistencies, col_idx, "DatoTipoNumero")
@@ -354,9 +365,7 @@ class FirstValidationGroup:
             merged_df.iloc[:, 64].astype(str).isin(exception_list)
         )
         inconsistencies: pd.DataFrame = merged_df[~merged_df["is_valid"]]
-        return self.validate_inconsistencies(
-            inconsistencies, [64, -1], "ValidacionBancos"
-        )
+        return self.validate_inconsistencies(inconsistencies, 64, "ValidacionBancos")
 
     def mandatory_desempleo(self, new_sheet: str, col_idx: int) -> str:
         data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
@@ -532,7 +541,7 @@ class FirstValidationGroup:
         )
 
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
-        return self.validate_inconsistencies(inconsistencies, 15, "ValidacionConcepto")
+        return self.validate_inconsistencies(inconsistencies, 35, "ValidacionConcepto")
 
 
 ## Set global variables
@@ -832,4 +841,4 @@ if __name__ == "__main__":
     params = {
         "col_idx": "30",
     }
-    print(validate_sap())
+    print(validate_number_type())

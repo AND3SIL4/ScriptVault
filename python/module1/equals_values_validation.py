@@ -65,7 +65,7 @@ def main(params: dict):
 def is_valid(value1: str, value2: str, list_exception: list[str], is_radicado: bool) -> bool:
   """Method to know if the value is equals and validate into the exception list"""
   if is_radicado:
-    validation = value1 == value2
+    validation = (value1 == value2) or (value1 in list_exception)
     return validation
   else:
     validation = (value1 == value2) or (value1 in list_exception)
