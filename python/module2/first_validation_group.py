@@ -101,8 +101,10 @@ class FirstValidationGroup:
             except ValueError:
                 return value in list_exception
 
-        data_frame["is_valid"] = data_frame.iloc[:, col_idx].apply(
-            lambda value: validate_with_exception_list(value)
+        data_frame["is_valid"] = (
+            data_frame.iloc[:, col_idx]
+            .astype(str)
+            .apply(lambda value: validate_with_exception_list(value))
         )
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(inconsistencies, col_idx, "DatoTipoNumero")
@@ -290,21 +292,14 @@ class FirstValidationGroup:
         )
 
         ## Create a  subfunction to validate the identification
-        def validate_identification(
-            desempleo: str, identificador_pagos: str, radicado: str
-        ) -> bool:
-            if desempleo == "DESEMPLEO":
-                return identificador_pagos == "MANUAL"
+        def validate_identification(identificador_pagos: str, radicado: str) -> bool:
+            if bool(re.search(r"(^\s+|\s+$|\s{2,})", identificador_pagos)):
+                return False
             else:
-                return (
-                    bool(re.search(r"^[0-9]", identificador_pagos))
-                    or radicado in exception_list
-                )
+                return (identificador_pagos != "nan") or (radicado in exception_list)
 
         data_frame["is_valid"] = data_frame.apply(
-            lambda row: validate_identification(
-                str(row.iloc[12]), str(row.iloc[75]), str(row.iloc[2])
-            ),
+            lambda row: validate_identification(str(row.iloc[75]), str(row.iloc[2])),
             axis=1,
         )
 
@@ -839,6 +834,6 @@ if __name__ == "__main__":
     }
     main(params)
     params = {
-        "col_idx": "30",
+        "col_idx": "77",
     }
-    print(validate_number_type())
+    print(validate_identification_pagos_iaxis())
