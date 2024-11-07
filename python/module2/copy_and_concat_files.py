@@ -56,30 +56,21 @@ def main(params: dict):
         ## Unique cols name
         desempleo_df.columns = otros_ramos_df.columns
         otros_gastos.columns = otros_ramos_df.columns
+        ##Link the files previously filtered
+        base_pagos = pd.concat(
+            [desempleo_df, otros_ramos_df, otros_gastos], ignore_index=True
+        )
 
         ##Convert the column to date type
-        otros_ramos_df.iloc[:, col_idx] = pd.to_datetime(
-            otros_ramos_df.iloc[:, col_idx], format="%d/%m/%Y"
-        )
-        desempleo_df.iloc[:, col_idx] = pd.to_datetime(
-            desempleo_df.iloc[:, col_idx], format="%d/%m/%Y"
+        base_pagos.iloc[:, col_idx] = pd.to_datetime(
+            base_pagos.iloc[:, col_idx], format="%d/%m/%Y"
         )
 
         ##Make a filter
-        otros_ramos_filtered = otros_ramos_df[
-            (otros_ramos_df.iloc[:, col_idx] >= begin_date)
-            & (otros_ramos_df.iloc[:, col_idx] <= cut_off_date)
+        base_pagos = base_pagos[
+            (base_pagos.iloc[:, col_idx] >= begin_date)
+            & (base_pagos.iloc[:, col_idx] <= cut_off_date)
         ]
-
-        desempleo_filtered = desempleo_df[
-            (desempleo_df.iloc[:, col_idx] >= begin_date)
-            & (desempleo_df.iloc[:, col_idx] <= cut_off_date)
-        ]
-
-        ##Link the files previously filtered
-        base_pagos = pd.concat(
-            [desempleo_filtered, otros_ramos_filtered, otros_gastos], ignore_index=True
-        )
 
         ##Save changes into a temp folder
         base_pagos.to_excel(destination_path, index=False, sheet_name="PAGOS")

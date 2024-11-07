@@ -38,6 +38,8 @@ def main(params):
         otros_gastos = pd.read_excel(file_path, sheet_name="OGDS", engine="openpyxl")
         ## Assign the columns of the first data frame
         otros_gastos.columns = df.columns
+        
+        df: pd.DataFrame = pd.concat([df, otros_gastos], ignore_index=True)
 
         # Convert the column to datetime using the column index
         df.iloc[:, column_index] = pd.to_datetime(
@@ -50,11 +52,8 @@ def main(params):
             & (df.iloc[:, column_index] <= cut_off_date)
         ]
 
-        final_data_frame: pd.DataFrame = pd.concat(
-            [filter_file, otros_gastos], ignore_index=True
-        )
         # Copy to temp file to make validations
-        final_data_frame.to_excel(temp_file, index=False, sheet_name=sheet_name)
+        filter_file.to_excel(temp_file, index=False, sheet_name=sheet_name)
         return "SUCCESS: file copied successfully"
 
     except Exception as e:
@@ -69,7 +68,7 @@ if __name__ == "__main__":
         "temp_file": r"C:\ProgramData\AutomationAnywhere\Bots\Logs\AD_RCSN_SabanaPagosYBasesParaSinestralidad\TempFolder\BASE DE REPARTO 2024.xlsx",
         "start_date_input": "01/01/2024",
         "column_index": "24",
-        "cut_off_date": "24/10/2024",
+        "cut_off_date": "30/06/2024",
     }
 
     print(main(params))
