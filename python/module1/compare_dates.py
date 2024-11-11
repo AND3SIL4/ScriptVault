@@ -80,7 +80,7 @@ def less_or_equal(df: pd.DataFrame, col_idx1: int, col_idx2: int):
   return df[~df["VALIDACION_FECHA"]].copy()
 
 def greater(df: pd.DataFrame, col_idx1: int, col_idx2: int):
-  df["VALIDACION_FECHA"]= df.iloc[:, col_idx1] <= df.iloc[:, col_idx2]
+  df["VALIDACION_FECHA"]= df.iloc[:, col_idx1] > df.iloc[:, col_idx2]
   return df[~df["VALIDACION_FECHA"]].copy()
 
 if __name__== "__main__":
