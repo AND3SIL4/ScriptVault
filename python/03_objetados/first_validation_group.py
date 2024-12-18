@@ -393,22 +393,26 @@ class FirstValidationGroup:
         data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
 
         ## Sub function to validate
-        def validate_sarlaf(sarlaf: str, bien_diligenciado: str) -> bool:
+        def validate_sarlaf(sarlaf: str, bien_diligenciado: str, exento: str) -> bool:
             if sarlaf == "SI":
                 return bien_diligenciado == "X"
+            elif sarlaf == "NO":
+                return bien_diligenciado == "nan" and exento == "X"
             else:
-                return bien_diligenciado == "nan"
+                return False
 
         data_frame["is_valid"] = data_frame.apply(
             lambda row: validate_sarlaf(
-                str(row.iloc[85]), str(row.iloc[86])  # Special column
+                str(row.iloc[85]),  # Sarlaf column
+                str(row.iloc[86]),  # Bien diligenciado column
+                str(row.iloc[89]),  # Exento column
             ),
             axis=1,
         )
 
         inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
         return self.validate_inconsistencies(
-            inconsistencies, [85, 86], "CheckBeneficiarioSarlaf"
+            inconsistencies, [85, 86, 89], "CheckBeneficiarioSarlaf"
         )
 
     def fecha_vencimiento(self) -> str:
@@ -531,6 +535,55 @@ class FirstValidationGroup:
         print(inconsistencies)
         return self.validate_inconsistencies(
             inconsistencies, [0, 6, 11, 18], "ValidacionCodePrefixes"
+        )
+
+    def valor_coaseguradora(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+
+        # Subfunction to validate the column valor coaseguradora
+        def validate_coaseguradora(
+            porcentaje_positiva: str, valor_coaseguradora: str
+        ) -> bool:
+            if float(porcentaje_positiva) == 1.0:
+                return valor_coaseguradora == "nan"
+            else:
+                return (
+                    valor_coaseguradora.replace(";", "")
+                    .replace(",", "")
+                    .replace(".", "")
+                    .isdigit()
+                )
+
+        data_frame["is_valid"] = data_frame.apply(
+            lambda row: validate_coaseguradora(
+                str(row.iloc[48]),  # Porcentaje positiva
+                str(row.iloc[51]),  # Valor coaseguradora
+            ),
+            axis=1,
+        )
+        # Validate inconsistencies
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, [48, 51], "ValidacionValorCoaseguradora"
+        )
+
+    def beneficiario_phone(self) -> str:
+        data_frame: pd.DataFrame = self.read_excel(self.path_file, self.sheet_name)
+        exception_df: pd.DataFrame = self.read_excel(self.exception_file, "LISTAS")
+        exception_list: list[str] = (
+            exception_df["TELEFONO BENEFICIARIO"].dropna().astype(str).to_list()
+        )
+
+        # sub function to validate if the beneficiario phone is a valid number o are in the list exception
+        def validate_phone(value: str) -> bool:
+            return value.isdigit() or value in exception_list
+
+        data_frame["is_valid"] = data_frame.iloc[:, 58].apply(
+            lambda value: validate_phone(str(value))
+        )
+        inconsistencies: pd.DataFrame = data_frame[~data_frame["is_valid"]]
+        return self.validate_inconsistencies(
+            inconsistencies, 58, "ValidacionBeneficiarioTelefono"
         )
 
 
@@ -828,13 +881,29 @@ def validate_code_prefixes() -> str:
         return f"ERROR: {e}"
 
 
+def validate_valor_coaseguradora() -> str:
+    try:
+        validation: str = validation_group.valor_coaseguradora()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
+def validate_beneficiario_phone() -> str:
+    try:
+        validation: str = validation_group.beneficiario_phone()
+        return validation
+    except Exception as e:
+        return f"ERROR: {e}"
+
+
 if __name__ == "__main__":
     params = {
         "file_path": r"C:\ProgramData\AutomationAnywhere\Bots\AD_GI_BaseObjetados_SabanaPagosBasesSiniestralidad\Temp\Objetados.xlsx",
         "sheet_name": "Objeciones 2022 - 2023 -2024",
-        "inconsistencies_file": r"C:\ProgramData\AutomationAnywhere\Bots\AD_GI_BaseObjetados_SabanaPagosBasesSiniestralidad\Output\Inconsistencias\InconsistenciasBaseObjetados.xlsx",
+        "inconsistencies_file": r"C:\ProgramData\AutomationAnywhere\Bots\AD_GI_BaseObjetados_SabanaPagosBasesSiniestralidad\Temp\InconsistenciasBaseObjetados.xlsx",
         "exception_file": r"C:\ProgramData\AutomationAnywhere\Bots\AD_GI_BaseObjetados_SabanaPagosBasesSiniestralidad\Input\EXCEPCIONES BASE OBJETADOS.xlsx",
     }
     otros = {"col_idx": "51"}
     print(main(params))
-    print(validate_number_type(otros))
+    print(validate_check_sarlaf())
