@@ -18,7 +18,7 @@ Sub ConvertirABValores(ByVal libro As Workbook)
         Next vLink
     End If
 
-    ' Convertir todo a valores
+    ' Por cada hoja.
     For Each hoja In libro.Sheets
         hoja.Activate
         For Each celda In hoja.UsedRange
@@ -36,5 +36,5 @@ Sub ConvertirABValores(ByVal libro As Workbook)
     Application.ScreenUpdating = True
     Application.EnableEvents = True
     Application.AskToUpdateLinks = True
-    Application.UpdateLinks = xlUpdateLinksPrompt  ' Restaurar comportamiento predeterminado
+    Application.UpdateLinks = xlUpdateLinksPrompt  
 End Sub
